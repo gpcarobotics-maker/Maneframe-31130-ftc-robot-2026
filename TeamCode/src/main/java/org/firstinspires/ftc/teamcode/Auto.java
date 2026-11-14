@@ -7,14 +7,14 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 /**
- * AUTO: get off the wall, strafe left, then drive into the human player zone.
+ * AUTO: get off the wall, strafe left, then back up partway into the human player zone.
  *
- * File must be named AutoOutAndBack.java and live in:
+ * File must be named Auto.java and live in:
  *   TeamCode/src/main/java/org/firstinspires/ftc/teamcode/
  *
  *   Step 1: drive FORWARD off the wall
  *   Step 2: strafe LEFT
- *   Step 3: drive into the human player zone (BACKWARD toward the wall by default)
+ *   Step 3: back up only PARTWAY, so the robot ends OFF the wall (needed for the point)
  *
  * It is TIMED (no encoders), so distances depend on battery charge.
  * Test on the practice field and adjust the numbers below.
@@ -36,7 +36,7 @@ public class Auto extends LinearOpMode {
     private static final double STRAFE_POWER    = 0.5;  // strafing is slower than driving, so a bit more power
     private static final double STRAFE_LEFT_SEC = 0.8;  // was 0.5, needed more left after testing
 
-    // Step 3: into the human player zone
+    // Step 3: back up partway into the human player zone
     private static final double ZONE_POWER      = 0.4;
     private static final double ZONE_SEC        = 0.35; // was 0.8, which ended back ON the wall (no point); only back up about halfway
     // -1 = BACK toward the wall (zone is against the wall). Change to 1 if the zone is in FRONT of you.
@@ -64,7 +64,7 @@ public class Auto extends LinearOpMode {
             m.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE); // stop sharply between moves
         }
 
-        telemetry.addLine("Auto ready: off wall -> strafe left -> into zone. Press PLAY.");
+        telemetry.addLine("Auto ready: off wall -> strafe left -> back up partway. Press PLAY.");
         telemetry.update();
 
         waitForStart();
@@ -79,11 +79,11 @@ public class Auto extends LinearOpMode {
         move("2: Strafing left", 0, -STRAFE_POWER, STRAFE_LEFT_SEC);
         pause("Pause", PAUSE_SEC);
 
-        // Step 3: into the human player zone
-        move("3: Into the human player zone", ZONE_DIRECTION * ZONE_POWER, 0, ZONE_SEC);
+        // Step 3: back up partway (stays off the wall)
+        move("3: Backing up partway", ZONE_DIRECTION * ZONE_POWER, 0, ZONE_SEC);
 
         stopDrive();
-        telemetry.addLine("Done. Parked in the human player zone.");
+        telemetry.addLine("Done. Parked off the wall.");
         telemetry.update();
 
         // Stay stopped until the auto period ends.
