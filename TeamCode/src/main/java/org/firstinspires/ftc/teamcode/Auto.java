@@ -38,7 +38,7 @@ public class Auto extends LinearOpMode {
 
     // Step 3: into the human player zone
     private static final double ZONE_POWER      = 0.4;
-    private static final double ZONE_SEC        = 0.8;  // was 0.5; +0.3 to match the longer drive out
+    private static final double ZONE_SEC        = 0.35; // was 0.8, which ended back ON the wall (no point); only back up about halfway
     // -1 = BACK toward the wall (zone is against the wall). Change to 1 if the zone is in FRONT of you.
     private static final int    ZONE_DIRECTION  = -1;
 
