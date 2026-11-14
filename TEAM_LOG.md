@@ -121,6 +121,8 @@ The single source of truth for this robot's code. Read this first. Every change 
 
 ## 4. Lessons learned (don't repeat these)
 
+- **Pull before pushing.** Other people (Claude B, teammates) can push to GitHub too. If a push is rejected, use Git > Pull, or click **Merge** in Android Studio's "Push Rejected" window, then push again. Command-line git on the Mac has no GitHub login, so pulls and pushes go through Android Studio.
+
 - **Drive:** stick up strafing meant one diagonal pair (backLeft and frontRight) was reversed. After fixing that, everything was inverted, so all four were flipped. The final directions are in the table above.
 - **Flipping every direction at once** also reversed the flywheel. That jammed balls and stalled it. Change one mechanism at a time.
 - **Flywheel RPM read 0:** the encoder cables were crossed with the intake Core Hex's at the hub. Fixed by putting each encoder in the encoder port with the same number as its own motor.
@@ -209,3 +211,4 @@ The plan is manual turret and hood plus field-centric driving first, and auto ai
 | 2026-11-14 | Team lead + Captain (Claude A) | The team lead reported "the auto worked". Merged `claude-a/auto-stay-off-wall` into main (fast-forward; Claude B had agreed, conditional on a field test). Auto settings marked confirmed |
 | 2026-11-14 | Captain (Claude A) | The team lead asked for the intake and feeder to run separately. TeleOp: intake stays on controller 2 L2 (in) / L1 (out), the feeder servo moves to Cross (in) / Circle (out), and the flywheel stays on R2/R1. Branch `claude-a/split-intake-servo`. Not tested on the robot yet; merge after it works |
 | 2026-11-14 | Team lead + Captain (Claude A) | The team lead reported the intake/servo split "works" on the robot. Merged `claude-a/split-intake-servo` into main (fast-forward). Claude B's code review is still welcome after the fact |
+| 2026-11-14 | Team lead + Captain (Claude A) | The push was rejected: GitHub main had an extra commit `c20d3a8` from account **bored5644533** (one comment line at the top of README.md, untagged, straight to main). The team lead merged it in Android Studio (merge commit `e9e2429`) and pushed. main on GitHub = the Mac |
