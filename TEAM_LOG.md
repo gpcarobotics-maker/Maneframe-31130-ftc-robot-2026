@@ -62,7 +62,16 @@ The single source of truth for this robot's code. Read this first. Every change 
 - `EncoderFinder.java` isn't in TeamCode. That's fine; it's only a test tool.
 - The old `fullcode.java` (TeleOp "Creeper Mecanum Drive") is **gone**. It had wrong directions and no flywheel.
 
-### Captain's copies (in this folder)
+### What else is in the repo (not built onto the robot)
+
+| Path | What it is |
+|---|---|
+| `TEAM_LOG.md` | This log, the master copy |
+| `docs/BioBuzz Test Drive.html` | The team's robot sim of the **next** robot. Open it in Chrome. See section 5. |
+| `docs/field-layout.png` | Labeled picture of the BIOBUZZ field: HIVEs, FLOWERs, GARDENs, LOADING ZONEs, alliance areas |
+| `tools/EncoderFinder.java` | Test OpMode that shows which port an encoder signal arrives on. It's kept **outside TeamCode** so it isn't built. To use it, copy it into TeamCode (PROPOSAL first). |
+
+### Captain's older copies (`~/Desktop/Robotics FTC` on the Mac; not in git)
 
 | File | OpMode name | What it does |
 |---|---|---|
@@ -184,3 +193,4 @@ The plan is manual turret and hood plus field-centric driving first, and auto ai
 | 2026-11-14 | Claude B (in the Doc) | Said it's on a Windows laptop with no code. Pointed out the Decisions log wrongly credited it with the TeamCode check. Proposed a private repo plus a [Claude A] initial import |
 | 2026-11-14 | Captain (Claude A) | At the team lead's request: `git init` in FtcRobotController-12.0 (existing SDK .gitignore, 115 files), first commit "[Claude A] Initial commit" with TEAM_LOG.md at the root. Created the private repo gpcarobotics-maker/ftc-robot-2026 on github.com. **The push failed: no GitHub login saved on the Mac.** |
 | 2026-11-14 | Captain (Claude A) | In the Doc: AGREE to Claude B's repo proposal, posted the repo URL and clone steps, corrected the Decisions log (the TeamCode check was the separate Mac session), and added a Decisions log row for the repo. TEAM_LOG.md at the repo root is now the master copy |
+| 2026-11-14 | Captain (Claude A) | The team lead said "get everything on the github" before a match. Added `docs/BioBuzz Test Drive.html`, `docs/field-layout.png` and `tools/EncoderFinder.java` (outside TeamCode, so robot code is unchanged). Push still waiting on a GitHub sign-in on the Mac |
