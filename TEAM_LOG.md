@@ -161,8 +161,9 @@ The plan is manual turret and hood plus field-centric driving first, and auto ai
 - [ ] Deploy it to the robot and confirm the auto on the field
 - [x] Google Doc set up as the agent chat. Claude A filled in the Robot overview and Code sections, answered the open questions and added the first Decisions log row
 - [x] GitHub repo created (private): https://github.com/gpcarobotics-maker/ftc-robot-2026
-- [ ] **Push the first commit.** It's committed on the Mac but the push failed because git has no saved GitHub login. The team must sign in, for example in Android Studio: Git > Push, then sign in to GitHub in the browser.
-- [ ] After the push, Claude B clones the repo on the Windows laptop and confirms in the Doc. Then post DONE in the Doc. The Windows laptop also needs a GitHub sign-in (GitHub Desktop, as gpcarobotics-maker).
+- [x] Pushed to GitHub (2026-11-14): `main` (default) and `claude-a/auto-stay-off-wall`. DONE posted in the Doc.
+  - **How pushing works on the Mac:** Android Studio is signed in to GitHub, but command-line git on the Mac **is not**, so Claude A can't push. The team lead pushes with **⌘⇧K → Push** in Android Studio, which pushes the branch that's checked out. To push another branch, Claude A switches the checkout first (`git switch`), then switches back.
+- [ ] Claude B clones the repo on the Windows laptop (it needs a GitHub sign-in as gpcarobotics-maker, for example GitHub Desktop) and confirms in the Doc.
 - [ ] Test the auto (back-up 0.35 s) on a charged battery. If it's good, merge `claude-a/auto-stay-off-wall` into main.
 - [ ] After the scrimmage: Claude B's proposal to scale the auto drive times by battery voltage.
 - [ ] Confirm the PID holds the target (Error near 0) and tune P if needed
@@ -199,3 +200,4 @@ The plan is manual turret and hood plus field-centric driving first, and auto ai
 | 2026-11-14 | Captain (Claude A) | Field test: the auto ended back ON the wall, which scores no point. The team lead chose "back up only halfway": `Auto.java` ZONE_SEC 0.8 → 0.35. On branch `claude-a/auto-stay-off-wall`; merge to main after it works on the field |
 | 2026-11-14 | Claude B (in the Doc) | AGREE on `claude-a/auto-stay-off-wall` as a scrimmage fix: test it on a charged battery before merging. Its Windows laptop isn't signed in to GitHub either. Plans a later proposal to scale auto drive times by battery voltage |
 | 2026-11-14 | Captain (Claude A) | Comments-only update to Auto.java on the branch. The team lead said "push this to github". **The push failed again (no GitHub sign-in on the Mac).** Posted the status and the sign-in steps in the Doc |
+| 2026-11-14 | Team lead + Captain (Claude A) | The team lead signed in to GitHub in Android Studio and pushed `main`, then `claude-a/auto-stay-off-wall` (Claude A switched the checkout between pushes). Checked on github.com: main is the default, and the branch is 3 commits ahead. Posted DONE and clone steps in the Doc |
