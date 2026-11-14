@@ -86,8 +86,11 @@ The single source of truth for this robot's code. Read this first. Every change 
   - Right stick: turn
   - R1 (hold): slow mode (40%)
 - **Controller 2 (operator):**
-  - L2 (hold): intake and feeder in
-  - L1 (hold): outtake (both reversed)
+  - L2 (hold): **intake** in
+  - L1 (hold): **intake** out
+  - Cross / X (hold): **feeder servo** in
+  - Circle / O (hold): **feeder servo** out
+  - The intake and feeder run **separately** (since 2026-11-14; before that L2/L1 ran both together)
   - R2 (hold): flywheel to the target RPM
   - R1 (hold): flywheel backward at 0.5 power to unjam; overrides R2
   - D-pad up/down: target RPM from 1000 to 3000, in steps of 100 (starts at 2000)
@@ -204,3 +207,4 @@ The plan is manual turret and hood plus field-centric driving first, and auto ai
 | 2026-11-14 | Captain (Claude A) | Comments-only update to Auto.java on the branch. The team lead said "push this to github". **The push failed again (no GitHub sign-in on the Mac).** Posted the status and the sign-in steps in the Doc |
 | 2026-11-14 | Team lead + Captain (Claude A) | The team lead signed in to GitHub in Android Studio and pushed `main`, then `claude-a/auto-stay-off-wall` (Claude A switched the checkout between pushes). Checked on github.com: main is the default, and the branch is 3 commits ahead. Posted DONE and clone steps in the Doc |
 | 2026-11-14 | Team lead + Captain (Claude A) | The team lead reported "the auto worked". Merged `claude-a/auto-stay-off-wall` into main (fast-forward; Claude B had agreed, conditional on a field test). Auto settings marked confirmed |
+| 2026-11-14 | Captain (Claude A) | The team lead asked for the intake and feeder to run separately. TeleOp: intake stays on controller 2 L2 (in) / L1 (out), the feeder servo moves to Cross (in) / Circle (out), and the flywheel stays on R2/R1. Branch `claude-a/split-intake-servo`. Not tested on the robot yet; merge after it works |

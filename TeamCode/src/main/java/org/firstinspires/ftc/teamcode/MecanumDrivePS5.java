@@ -23,8 +23,10 @@ import com.qualcomm.robotcore.util.Range;
  *   R1 (right bumper)        -> hold for slow / precision driving
  *
  * Controller 2 (gamepad2) - OPERATOR:
- *   L2 (left trigger)        -> hold to run intake + feeder together
- *   L1 (left bumper)         -> hold to outtake (intake + feeder BACKWARD)
+ *   L2 (left trigger)        -> hold to run the INTAKE in
+ *   L1 (left bumper)         -> hold to run the INTAKE out
+ *   Cross (X)                -> hold to run the FEEDER servo in
+ *   Circle (O)               -> hold to run the FEEDER servo out
  *   R2 (right trigger)       -> hold to spin flywheel at the target RPM
  *   D-pad UP / DOWN          -> raise / lower target RPM (1000 to 3000, steps of 100)
  *   R1 (right bumper)        -> hold to spin flywheel BACKWARD (unjam). Overrides R2.
@@ -166,15 +168,21 @@ public class MecanumDrivePS5 extends LinearOpMode {
             frontRight.setPower((drive - strafe - turn) / denominator * speed);
             backRight.setPower((drive + strafe - turn) / denominator * speed);
 
-            // ================= INTAKE + FEEDER =================
-            if (gamepad2.left_trigger > 0.2) {          // Controller 2 L2: run both forward
+            // ================= INTAKE (Core Hex) =================
+            if (gamepad2.left_trigger > 0.2) {          // Controller 2 L2: intake in
                 intake.setPower(INTAKE_POWER);
-                feeder.setPower(FEEDER_POWER);
-            } else if (gamepad2.left_bumper) {          // Controller 2 L1: outtake (both backward)
+            } else if (gamepad2.left_bumper) {          // Controller 2 L1: intake out
                 intake.setPower(-INTAKE_POWER);
-                feeder.setPower(-FEEDER_POWER);
             } else {
                 intake.setPower(0);
+            }
+
+            // ================= FEEDER (servo) =================
+            if (gamepad2.cross) {                       // Controller 2 Cross (X): feeder in
+                feeder.setPower(FEEDER_POWER);
+            } else if (gamepad2.circle) {               // Controller 2 Circle (O): feeder out
+                feeder.setPower(-FEEDER_POWER);
+            } else {
                 feeder.setPower(0);
             }
 
