@@ -109,10 +109,12 @@ The single source of truth for this robot's code. Read this first. Every change 
 
 - **Step 1:** forward 0.4 power for **0.7 s**
 - **Step 2:** strafe left 0.5 power for **0.8 s**
-- **Step 3:** backward 0.4 power for **0.8 s**, into the zone (`ZONE_DIRECTION = -1`)
+- **Step 3:** backward 0.4 power for **0.35 s**, only partway back (`ZONE_DIRECTION = -1`)
 - 0.2 s pause between steps. After auto, the Driver Station preselects the TeleOp.
 - **Start position:** robot's back against the alliance wall, facing into the field. The same auto works for red and blue (the field is mirrored).
-- The run before these settings "worked, but needed +0.3 s up and more left". The new values haven't been confirmed yet.
+- **✅ Confirmed working on the field (2026-11-14), and merged into main.**
+- **The robot must end OFF the wall to score the point.** With a 0.8 s back-up it ended back on the wall and scored nothing.
+- The auto is timed, so it goes shorter on a low battery. Run it on a charged battery.
 
 ## 4. Lessons learned (don't repeat these)
 
@@ -158,13 +160,13 @@ The plan is manual turret and hood plus field-centric driving first, and auto ai
 ## 6. Open items
 
 - [x] New auto timings (0.7 / 0.8 / 0.8) are in TeamCode `Auto.java`
-- [ ] Deploy it to the robot and confirm the auto on the field
+- [x] Auto confirmed on the field with forward 0.7 / left 0.8 / back 0.35
 - [x] Google Doc set up as the agent chat. Claude A filled in the Robot overview and Code sections, answered the open questions and added the first Decisions log row
 - [x] GitHub repo created (private): https://github.com/gpcarobotics-maker/ftc-robot-2026
 - [x] Pushed to GitHub (2026-11-14): `main` (default) and `claude-a/auto-stay-off-wall`. DONE posted in the Doc.
   - **How pushing works on the Mac:** Android Studio is signed in to GitHub, but command-line git on the Mac **is not**, so Claude A can't push. The team lead pushes with **⌘⇧K → Push** in Android Studio, which pushes the branch that's checked out. To push another branch, Claude A switches the checkout first (`git switch`), then switches back.
 - [ ] Claude B clones the repo on the Windows laptop (it needs a GitHub sign-in as gpcarobotics-maker, for example GitHub Desktop) and confirms in the Doc.
-- [ ] Test the auto (back-up 0.35 s) on a charged battery. If it's good, merge `claude-a/auto-stay-off-wall` into main.
+- [x] The auto (back-up 0.35 s) worked on the field. `claude-a/auto-stay-off-wall` merged into main (fast-forward)
 - [ ] After the scrimmage: Claude B's proposal to scale the auto drive times by battery voltage.
 - [ ] Confirm the PID holds the target (Error near 0) and tune P if needed
 - [ ] Find the best shooting RPM from the usual spot and write it here
@@ -201,3 +203,4 @@ The plan is manual turret and hood plus field-centric driving first, and auto ai
 | 2026-11-14 | Claude B (in the Doc) | AGREE on `claude-a/auto-stay-off-wall` as a scrimmage fix: test it on a charged battery before merging. Its Windows laptop isn't signed in to GitHub either. Plans a later proposal to scale auto drive times by battery voltage |
 | 2026-11-14 | Captain (Claude A) | Comments-only update to Auto.java on the branch. The team lead said "push this to github". **The push failed again (no GitHub sign-in on the Mac).** Posted the status and the sign-in steps in the Doc |
 | 2026-11-14 | Team lead + Captain (Claude A) | The team lead signed in to GitHub in Android Studio and pushed `main`, then `claude-a/auto-stay-off-wall` (Claude A switched the checkout between pushes). Checked on github.com: main is the default, and the branch is 3 commits ahead. Posted DONE and clone steps in the Doc |
+| 2026-11-14 | Team lead + Captain (Claude A) | The team lead reported "the auto worked". Merged `claude-a/auto-stay-off-wall` into main (fast-forward; Claude B had agreed, conditional on a field test). Auto settings marked confirmed |
