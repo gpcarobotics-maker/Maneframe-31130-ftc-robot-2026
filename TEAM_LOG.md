@@ -5,7 +5,10 @@ The single source of truth for this robot's code. Read this first. Every change 
 ## 1. How the agents work together
 
 - **Captain = "Claude A" in the Doc:** the Claude Code session in this folder (`~/Desktop/Robotics FTC`). It holds the code files and this log.
-- **Doc agent = "Claude B" in the Doc:** the other Claude session.
+- **Doc agent = "Claude B" in the Doc:** a Claude agent on a **different computer (a Windows laptop) and a different account**. It can only be reached through the Google Doc, not by direct message, and it sees the code only through GitHub.
+  - **Not Claude B:** the local Mac session titled "FTC tank drive robot code". That was a separate, third agent. It confirmed TeamCode and agreed to the rules earlier today, but it isn't Claude B.
+- **GitHub repo:** https://github.com/gpcarobotics-maker/ftc-robot-2026 (private, team account `gpcarobotics-maker`). This TEAM_LOG.md lives at the **repo root** and is the master copy.
+  - **Doc ground rules:** one branch per change (`claude-a/...` or `claude-b/...`), every commit tagged `[Claude A]` or `[Claude B]`, `git pull` first, and merge only after it builds.
 - **The agents talk IN the Google Doc** (the user's instruction, 2026-11-14), not by direct message: **"Agent chat for FTC ROBOTICS"**
   (https://docs.google.com/document/d/16yzDLhIDrrXNoFa-xa64l6UUgUqjrSV6gd48D3MoBtk/edit). It's titled "FTC Robot: Claude Agent Coordination".
   - **Sections:** Purpose, Ground rules, How we use this doc, Robot overview, Code and GitHub, Change proposals (table), Decisions log (table), Open questions.
@@ -148,8 +151,9 @@ The plan is manual turret and hood plus field-centric driving first, and auto ai
 - [x] New auto timings (0.7 / 0.8 / 0.8) are in TeamCode `Auto.java`
 - [ ] Deploy it to the robot and confirm the auto on the field
 - [x] Google Doc set up as the agent chat. Claude A filled in the Robot overview and Code sections, answered the open questions and added the first Decisions log row
-- [ ] Team lead: set up a GitHub repo? (open question in the Doc)
-- [ ] Claude B to read the Doc and confirm there (its session wasn't running at 2026-11-14 midday)
+- [x] GitHub repo created (private): https://github.com/gpcarobotics-maker/ftc-robot-2026
+- [ ] **Push the first commit.** It's committed on the Mac but the push failed because git has no saved GitHub login. The team must sign in, for example in Android Studio: Git > Push, then sign in to GitHub in the browser.
+- [ ] After the push, Claude B clones the repo on the Windows laptop and confirms in the Doc. Then post DONE in the Doc.
 - [ ] Confirm the PID holds the target (Error near 0) and tune P if needed
 - [ ] Find the best shooting RPM from the usual spot and write it here
 - [ ] New robot TeleOp (section 5), after the scrimmage
@@ -177,3 +181,6 @@ The plan is manual turret and hood plus field-centric driving first, and auto ai
 | 2026-11-14 | Captain | The user said the Doc agent was confused. Sent it a full status recap (roles, robot, what's built, open items) and asked for "Clear" or the specific confusion |
 | 2026-11-14 | Doc agent | Replied "Clear". It independently confirmed TeamCode (TeleOp, Auto at 0.7/0.8/0.8, readme). It's only waiting on the user's OK for the Google Doc |
 | 2026-11-14 | Captain (Claude A) | The user said to talk in the Google Doc. Found it already structured. Filled in the Robot overview and Code and GitHub sections, answered Claude B's 2 open questions (no git repo; SDK 12.0.0, no path library), added a GitHub question for the team lead, and added the first Decisions log row. A direct message to Claude B failed because its session isn't running |
+| 2026-11-14 | Claude B (in the Doc) | Said it's on a Windows laptop with no code. Pointed out the Decisions log wrongly credited it with the TeamCode check. Proposed a private repo plus a [Claude A] initial import |
+| 2026-11-14 | Captain (Claude A) | At the team lead's request: `git init` in FtcRobotController-12.0 (existing SDK .gitignore, 115 files), first commit "[Claude A] Initial commit" with TEAM_LOG.md at the root. Created the private repo gpcarobotics-maker/ftc-robot-2026 on github.com. **The push failed: no GitHub login saved on the Mac.** |
+| 2026-11-14 | Captain (Claude A) | In the Doc: AGREE to Claude B's repo proposal, posted the repo URL and clone steps, corrected the Decisions log (the TeamCode check was the separate Mac session), and added a Decisions log row for the repo. TEAM_LOG.md at the repo root is now the master copy |
