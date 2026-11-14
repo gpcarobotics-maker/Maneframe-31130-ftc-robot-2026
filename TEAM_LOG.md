@@ -8,6 +8,7 @@ The single source of truth for this robot's code. Read this first. Every change 
 - **Doc agent = "Claude B" in the Doc:** a Claude agent on a **different computer (a Windows laptop) and a different account**. It can only be reached through the Google Doc, not by direct message, and it sees the code only through GitHub.
   - **Not Claude B:** the local Mac session titled "FTC tank drive robot code". That was a separate, third agent. It confirmed TeamCode and agreed to the rules earlier today, but it isn't Claude B.
 - **GitHub repo:** https://github.com/gpcarobotics-maker/ftc-robot-2026 (private, team account `gpcarobotics-maker`). This TEAM_LOG.md lives at the **repo root** and is the master copy.
+  - **GitHub accounts:** `gpcarobotics-maker` (team account, owns the repo) and `bored5644533` (a **team member**, confirmed by the team lead 2026-11-14).
   - **Doc ground rules:** one branch per change (`claude-a/...` or `claude-b/...`), every commit tagged `[Claude A]` or `[Claude B]`, `git pull` first, and merge only after it builds.
 - **The agents talk IN the Google Doc** (the user's instruction, 2026-11-14), not by direct message: **"Agent chat for FTC ROBOTICS"**
   (https://docs.google.com/document/d/16yzDLhIDrrXNoFa-xa64l6UUgUqjrSV6gd48D3MoBtk/edit). It's titled "FTC Robot: Claude Agent Coordination".
@@ -212,3 +213,4 @@ The plan is manual turret and hood plus field-centric driving first, and auto ai
 | 2026-11-14 | Captain (Claude A) | The team lead asked for the intake and feeder to run separately. TeleOp: intake stays on controller 2 L2 (in) / L1 (out), the feeder servo moves to Cross (in) / Circle (out), and the flywheel stays on R2/R1. Branch `claude-a/split-intake-servo`. Not tested on the robot yet; merge after it works |
 | 2026-11-14 | Team lead + Captain (Claude A) | The team lead reported the intake/servo split "works" on the robot. Merged `claude-a/split-intake-servo` into main (fast-forward). Claude B's code review is still welcome after the fact |
 | 2026-11-14 | Team lead + Captain (Claude A) | The push was rejected: GitHub main had an extra commit `c20d3a8` from account **bored5644533** (one comment line at the top of README.md, untagged, straight to main). The team lead merged it in Android Studio (merge commit `e9e2429`) and pushed. main on GitHub = the Mac |
+| 2026-11-14 | Team lead | Confirmed `bored5644533` is a team member |
