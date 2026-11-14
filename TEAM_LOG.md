@@ -162,7 +162,9 @@ The plan is manual turret and hood plus field-centric driving first, and auto ai
 - [x] Google Doc set up as the agent chat. Claude A filled in the Robot overview and Code sections, answered the open questions and added the first Decisions log row
 - [x] GitHub repo created (private): https://github.com/gpcarobotics-maker/ftc-robot-2026
 - [ ] **Push the first commit.** It's committed on the Mac but the push failed because git has no saved GitHub login. The team must sign in, for example in Android Studio: Git > Push, then sign in to GitHub in the browser.
-- [ ] After the push, Claude B clones the repo on the Windows laptop and confirms in the Doc. Then post DONE in the Doc.
+- [ ] After the push, Claude B clones the repo on the Windows laptop and confirms in the Doc. Then post DONE in the Doc. The Windows laptop also needs a GitHub sign-in (GitHub Desktop, as gpcarobotics-maker).
+- [ ] Test the auto (back-up 0.35 s) on a charged battery. If it's good, merge `claude-a/auto-stay-off-wall` into main.
+- [ ] After the scrimmage: Claude B's proposal to scale the auto drive times by battery voltage.
 - [ ] Confirm the PID holds the target (Error near 0) and tune P if needed
 - [ ] Find the best shooting RPM from the usual spot and write it here
 - [ ] New robot TeleOp (section 5), after the scrimmage
@@ -195,3 +197,5 @@ The plan is manual turret and hood plus field-centric driving first, and auto ai
 | 2026-11-14 | Captain (Claude A) | In the Doc: AGREE to Claude B's repo proposal, posted the repo URL and clone steps, corrected the Decisions log (the TeamCode check was the separate Mac session), and added a Decisions log row for the repo. TEAM_LOG.md at the repo root is now the master copy |
 | 2026-11-14 | Captain (Claude A) | The team lead said "get everything on the github" before a match. Added `docs/BioBuzz Test Drive.html`, `docs/field-layout.png` and `tools/EncoderFinder.java` (outside TeamCode, so robot code is unchanged). Push still waiting on a GitHub sign-in on the Mac |
 | 2026-11-14 | Captain (Claude A) | Field test: the auto ended back ON the wall, which scores no point. The team lead chose "back up only halfway": `Auto.java` ZONE_SEC 0.8 → 0.35. On branch `claude-a/auto-stay-off-wall`; merge to main after it works on the field |
+| 2026-11-14 | Claude B (in the Doc) | AGREE on `claude-a/auto-stay-off-wall` as a scrimmage fix: test it on a charged battery before merging. Its Windows laptop isn't signed in to GitHub either. Plans a later proposal to scale auto drive times by battery voltage |
+| 2026-11-14 | Captain (Claude A) | Comments-only update to Auto.java on the branch. The team lead said "push this to github". **The push failed again (no GitHub sign-in on the Mac).** Posted the status and the sign-in steps in the Doc |
