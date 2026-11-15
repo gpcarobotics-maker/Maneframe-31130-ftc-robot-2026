@@ -16,12 +16,12 @@
   const BARS = [[72 - FX, 72 - FY, 72 + FY], [72 + FX, 72 - FY, 72 + FY]];           // [x, y0, y1], 1.6 in wide
   const FLOWERS = [[48, 144 - 3.2], [144 - 3.2, 96], [3.2, 48], [96, 3.2]], FLOWER_R = 0.06 / IN;
   // what the robot would touch at pose (x, y, h radians); "" when it's clear. margin in inches.
-  function obstacleAt(x, y, h, margin = 0, wallMargin = 0) {
+  function obstacleAt(x, y, h, margin = 0, wallMargin = 0, walls = true) {
     const c = Math.cos(h), s = Math.sin(h);
     const distTo = (px, py) => { const du = (px - x) * c + (py - y) * s, dv = -(px - x) * s + (py - y) * c; return Math.hypot(du - clamp(du, -HL, HL), dv - clamp(dv, -HW, HW)); };
     for (const [fx, fy] of FLOWERS) if (distTo(fx, fy) < FLOWER_R + margin) return "a FLOWER";
     for (const [bx, y0, y1] of BARS) for (let by = y0; by <= y1 + 1e-6; by += 0.5) if (distTo(bx, by) < BAR_HALF + margin) return "the HIVE frame bar";
-    for (const [u, v] of [[HL, HW], [HL, -HW], [-HL, HW], [-HL, -HW]]) { const px = x + u * c - v * s, py = y + u * s + v * c; const w = wallMargin - 0.05; if (px < w || px > 144 - w || py < w || py > 144 - w) return "the wall"; }
+    for (const [u, v] of [[HL, HW], [HL, -HW], [-HL, HW], [-HL, -HW]]) { const px = x + u * c - v * s, py = y + u * s + v * c; if (!walls) continue; const w = wallMargin - 0.05; if (px < w || px > 144 - w || py < w || py > 144 - w) return "the wall"; }
     return "";
   }
   // where a path first runs into something: {what, x, y} or null
@@ -30,7 +30,8 @@
     for (let k = 0; k <= 60; k++) {
       const t = k / 60, p = bez(pts, t);
       let h = step.heading === "constant" ? h1 : step.heading === "tangent" ? (() => { const d = bezD(pts, Math.min(t, 0.999)); return Math.hypot(d.x, d.y) > 1e-6 ? Math.atan2(d.y, d.x) : h0; })() : h0 + wrap(h1 - h0) * t;
-      const what = obstacleAt(p.x, p.y, h, 0.3); if (what) return { what, x: p.x, y: p.y, t };
+      // the wall only pushes the robot back (it slides along and carries on), so only the end pose has to clear it
+      const what = obstacleAt(p.x, p.y, h, 0.3, 0, k === 60); if (what) return { what, x: p.x, y: p.y, t };
     }
     return null;
   }
@@ -152,7 +153,9 @@
         inp.fwd = o.fwd; inp.str = o.str; inp.rot = o.rot;
         if (o.done) {
           if (o.stuck || o.timedOut) {
-            const what = obstacleAt(pose.x, pose.y, pose.h, 1.5, 1.5), at = `at (${pose.x.toFixed(0)}, ${pose.y.toFixed(0)})`;
+            let what = obstacleAt(pose.x, pose.y, pose.h, 1.5, 1.5);
+            if (!what) { const r = this.sim.rob, n = this.sim.balls.filter(q => q.state === "free" && Math.hypot(q.x - r.x, q.y - r.y) < 0.34).length; if (n) what = n === 1 ? "a ball it was pushing" : `${n} balls it was pushing`; }
+            const at = `at (${pose.x.toFixed(0)}, ${pose.y.toFixed(0)})`;
             this.log.push({ t: this.t, msg: o.stuck ? `Step ${this.i + 1} got stuck ${at}, ${o.dEnd.toFixed(0)} in short of its end${what ? ": it ran into " + what : ""}.` : `Step ${this.i + 1} timed out ${o.dEnd.toFixed(1)} in from its end point${what ? ", against " + what : ""}.` });
           }
           this.next();

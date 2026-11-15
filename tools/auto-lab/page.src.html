@@ -192,7 +192,7 @@ details summary { cursor: pointer; font: 700 15px var(--disp); letter-spacing: .
 "use strict";
 (function () {
   const { Sim, FIELD, KIND, R } = SimCore;
-  const { AutoRunner, placeRobot, toPedro, bez, tangentEnd, wrap, obstacleAt, pathBlock, BARS, FLOWERS, FLOWER_R, HW, HL, IN, F, D2R } = AutoRun;
+  const { AutoRunner, placeRobot, toPedro, bez, tangentEnd, wrap, obstacleAt, BARS, FLOWERS, FLOWER_R, HW, HL, IN, F, D2R } = AutoRun;
   const $ = id => document.getElementById(id);
   const AUTO_LEN = 30;
 
@@ -456,7 +456,7 @@ details summary { cursor: pointer; font: 700 15px var(--disp); letter-spacing: .
   let handles = [], pathSig = "";
   function lastPoseOf(i) { for (let k = i - 1; k >= 0; k--) { const s = auto.steps[k]; if (s.type === "path") return { x: s.x, y: s.y, h: s.heading === "tangent" ? tangentEnd(auto, k) : s.h }; } return auto.start; }
   function buildPaths() {
-    const sig = JSON.stringify(auto) + "|" + sel + "|" + (running && runner ? runner.i : -1);
+    const sig = JSON.stringify(auto) + "|" + sel + "|" + (running && runner ? runner.i : -1) + "|" + (dry && dry.done ? dry.sig.length + ":" + Object.keys(dry.bad).join(",") : "");
     if (sig === pathSig) return; pathSig = sig; clearPaths(); handles = [];
     const st = auto.start;
     footprint(st.x, st.y, st.h * D2R, mGhost); arrow(st.x, st.y, st.h * D2R, mStart, 0.2);
@@ -466,7 +466,7 @@ details summary { cursor: pointer; font: 700 15px var(--disp); letter-spacing: .
       if (s.type !== "path") return;
       const a = lastPoseOf(i), pts = [{ x: a.x, y: a.y }, ...s.controls, { x: s.x, y: s.y }], on = i === sel, now = running && runner && runner.i === i;
       const samples = []; for (let k = 0; k <= 80; k++) { const p = bez(pts, k / 80); samples.push(P(p.x, p.y, 0.012)); }
-      const blk = pathBlock(a, s), lit = on || now;
+      const blk = blockOf(i), lit = on || now;
       let len = 0; for (let k = 1; k < samples.length; k++) len += samples[k].distanceTo(samples[k - 1]);
       if (len > 0.01) { const clean = samples.filter((p, k) => k === 0 || p.distanceTo(samples[k - 1]) > 1e-4); if (clean.length > 1) pathG.add(own(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(clean), 160, lit ? 0.014 : 0.009, 6, false), blk ? (lit ? mBad : mBadDim) : lit ? mHon : mHonDim))); }
       if (blk) sprite(blk.x, blk.y, label("!", false, false, true), 0.1);
@@ -591,10 +591,32 @@ details summary { cursor: pointer; font: 700 15px var(--disp); letter-spacing: .
   function stepWarning(i) {
     const s = auto.steps[i];
     if (s.type === "shoot") { const p = lastPoseOf(i); if (!canShootAt(p.x, p.y)) return "The sim can't shoot from here: too close, or on the wrong side of the HIVE."; }
-    if (s.type === "path") { const b = blockOf(i); if (b) return `This path runs into ${b.what} near (${b.x.toFixed(0)}, ${b.y.toFixed(0)}), so the robot will get stuck. Move the end point or add a curve point to go around (the red zones on the floor).`; }
     return "";
   }
-  function blockOf(i) { const s = auto.steps[i]; return s && s.type === "path" ? pathBlock(lastPoseOf(i), s) : null; }
+  // ---- test run: after each edit the auto runs once in the background; a path is red only if the robot really got stuck or timed out there
+  let dry = null, dryTimer = null;
+  function blockOf(i) { return dry && dry.done && dry.sig === JSON.stringify(auto) ? dry.bad[i] || null : null; }
+  function startDryRun() {
+    const sig = JSON.stringify(auto); if (dry && dry.sig === sig) return;
+    clearTimeout(dryTimer);
+    const s = new Sim(); s.reset(auto.alliance); placeRobot(s, auto.start);
+    const r = new AutoRunner(s, auto), res = { sig, bad: {}, done: false }; let t = 0; dry = res;
+    const slice = () => {
+      if (dry !== res) return;
+      for (let n = 0; n < 300 && !r.done && t < AUTO_LEN; n++) {
+        const i = r.i, nLog = r.log.length; s.step(1 / 60, r.update(1 / 60)); t += 1 / 60;
+        if (r.log.length > nLog) { const p = toPedro(s.rob.x, s.rob.y, s.rob.th); res.bad[i] = { msg: r.log[r.log.length - 1].msg, x: p.x, y: p.y }; }
+      }
+      if (r.done || t >= AUTO_LEN) { res.done = true; showDryWarnings(); } else dryTimer = setTimeout(slice, 0);
+    };
+    dryTimer = setTimeout(slice, 40);
+  }
+  function showDryWarnings() {   // in place, so a form you're typing in keeps its focus
+    document.querySelectorAll("#steps .step").forEach(d => {
+      const b = blockOf(+d.dataset.i), e = d.querySelector(".dryw"); if (!e) return;
+      e.hidden = !b; e.textContent = b ? `Test run: ${b.msg} Move the end point or add a curve point to steer around the red striped zones.` : "";
+    });
+  }
   function renderStartWarn() { const w = obstacleAt(auto.start.x, auto.start.y, auto.start.h * D2R, 0.3); const e = $("startWarn"); e.hidden = !w; e.textContent = w ? `The robot overlaps ${w} here. Move the start pose.` : ""; }
   function renderSteps() {
     renderStartWarn();
@@ -606,9 +628,10 @@ details summary { cursor: pointer; font: 700 15px var(--disp); letter-spacing: .
       d.querySelector("small").textContent = stepSummary(s);
       if (i === sel) d.append(stepForm(s, i));
       const w = stepWarning(i); if (w) { const e = document.createElement("div"); e.className = "warn"; e.textContent = w; d.append(e); }
+      const dw = document.createElement("div"); dw.className = "warn dryw"; dw.hidden = true; d.append(dw);
       box.append(d);
     });
-    renderStepsLight();
+    renderStepsLight(); showDryWarnings();
   }
   function renderStepsLight() {   // keep the summary and the running highlight current without rebuilding forms
     document.querySelectorAll("#steps .step").forEach(d => {
@@ -678,7 +701,7 @@ details summary { cursor: pointer; font: 700 15px var(--disp); letter-spacing: .
     changed();
   });
 
-  function changed() { saveDraft(); resetSim(); syncForm(); renderJava(); renderJson(); }   // resetSim rebuilds the step cards first
+  function changed() { saveDraft(); resetSim(); syncForm(); renderJava(); renderJson(); startDryRun(); }   // resetSim rebuilds the step cards first
 
   // ---------------------------------------------------------------- run controls and results
   $("btnRun").addEventListener("click", run);
@@ -814,6 +837,6 @@ details summary { cursor: pointer; font: 700 15px var(--disp); letter-spacing: .
   // ---------------------------------------------------------------- start
   let last = performance.now();
   function frame(now) { const dt = Math.min(0.1, (now - last) / 1000); last = now; tick(dt); draw(dt); requestAnimationFrame(frame); }
-  syncForm(); resetSim(); renderJava(); renderJson(); requestAnimationFrame(frame);
+  syncForm(); resetSim(); renderJava(); renderJson(); startDryRun(); requestAnimationFrame(frame);
 })();
 </script>
