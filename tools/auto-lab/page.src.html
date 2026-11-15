@@ -2,6 +2,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;700&family=IBM+Plex+Mono:wght@400;600&family=Figtree:wght@400;600;700&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <style>
 /* Layout: the sim's pit-side look. The field, drawn to scale in Pedro inches, fills the left; the auto's steps, playback and Java sit in a panel on the right. One deliberate dark look, like the Test Drive sim. */
 :root {
@@ -37,7 +38,14 @@ h2 { font: 700 15px/1.2 var(--disp); letter-spacing: .08em; text-transform: uppe
 
 .app { max-width: 1320px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 14px; align-items: start; }
 .fieldwrap { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px; display: grid; gap: 8px; min-width: 0; }
-.fieldwrap canvas { width: 100%; aspect-ratio: 1; display: block; border-radius: 6px; touch-action: none; background: #6f7379; }
+.stage { position: relative; width: 100%; aspect-ratio: 1; max-height: calc(100vh - 150px); min-height: 320px; border-radius: 6px; overflow: hidden; background: #070d1e; }
+.stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+.views { position: absolute; top: 8px; left: 8px; z-index: 2; display: flex; gap: 0; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; background: rgba(12,22,48,.82); }
+.views button { border: 0; border-radius: 0; background: transparent; padding: 6px 11px; font: 700 13px var(--disp); letter-spacing: .06em; text-transform: uppercase; }
+.views button + button { border-left: 1px solid var(--line); }
+.views button[aria-pressed="true"] { background: var(--honey); color: #14203f; }
+.loading { position: absolute; bottom: 8px; left: 8px; right: 8px; z-index: 2; font-size: 12.5px; color: var(--mute); pointer-events: none; }
+#cursor { margin-left: auto; }
 .fieldbar { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 12.5px; color: var(--mute); }
 .fieldbar label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
 .timeline { height: 8px; border-radius: 4px; background: var(--bg); position: relative; overflow: hidden; }
@@ -93,12 +101,18 @@ details summary { cursor: pointer; font: 700 15px var(--disp); letter-spacing: .
 
 <div class="app">
   <section class="fieldwrap">
-    <canvas id="field" tabindex="0" aria-label="Field, top-down, in Pedro inches. Drag the points to change the paths. Double-click to add a path ending there."></canvas>
+    <div class="stage" id="stage">
+      <div class="views" role="group" aria-label="Camera view">
+        <button type="button" data-view="plan">Plan</button><button type="button" data-view="orbit">3D</button><button type="button" data-view="driver">Driver</button><button type="button" data-view="chase">Chase</button>
+      </div>
+      <div class="loading" id="loading">Loading the robot…</div>
+    </div>
     <div class="timeline"><i id="tl"></i></div>
-    <div class="status" id="status" aria-live="polite">Drag the dots to shape the paths. Double-click the field to add a path that ends there.</div>
+    <div class="status" id="status" aria-live="polite">Drag the numbered dots to move where each path ends, and the small cubes to bend it. Double-click the floor to add a path that ends there.</div>
     <div class="fieldbar">
       <label><input type="checkbox" id="optShoot"> Where you can shoot from</label>
       <label><input type="checkbox" id="optTrace" checked> Last run's track</label>
+      <span id="viewHint"></span>
       <span id="cursor" class="mono"></span>
     </div>
   </section>
@@ -256,135 +270,295 @@ details summary { cursor: pointer; font: 700 15px var(--disp); letter-spacing: .
     const r = s.solveAim("pollen"); return !!(r && r.sol && r.sol.ok && !r.wrongSide);
   }
 
-  // ---------------------------------------------------------------- drawing
-  const cv = $("field"), ctx = cv.getContext("2d");
-  let W = 600, scale = 600 / 144, handles = [];
-  const X = px => px * scale, Y = py => W - py * scale;          // Pedro inches -> canvas px
-  const WX = x => X((x + F) / IN), WY = y => Y((y + F) / IN);      // sim metres -> canvas px
-  function fit() {
-    const r = cv.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1);
-    W = r.width; scale = W / 144; cv.width = Math.round(W * dpr); cv.height = Math.round(W * dpr); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  }
-  new ResizeObserver(() => { fit(); }).observe(cv); fit();
+  // ---------------------------------------------------------------- 3D view: the Test Drive sim's field, HIVEs, balls and CAD robot
+  const stage = $("stage"), renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  const cv = renderer.domElement; cv.tabIndex = 0;
+  cv.setAttribute("aria-label", "The field in 3D. In Plan, 3D or Driver view, drag the dots to change the paths. Double-click the floor to add a path ending there.");
+  stage.prepend(cv);
+  const scene = new THREE.Scene(); scene.background = new THREE.Color("#070d1e");
+  const pcam = new THREE.PerspectiveCamera(46, 1, 0.05, 40); pcam.up.set(0, 0, 1);
+  const ocam = new THREE.OrthographicCamera(-2, 2, 2, -2, 0.1, 20); ocam.position.set(0, 0, 8); ocam.up.set(0, 1, 0); ocam.lookAt(0, 0, 0);
+  scene.add(new THREE.HemisphereLight(0xdfe8ff, 0x20283c, 0.72));
+  const sun = new THREE.DirectionalLight(0xffffff, 0.85); sun.position.set(-1.2, -1.5, 5); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+  Object.assign(sun.shadow.camera, { left: -2.6, right: 2.6, top: 2.6, bottom: -2.6, near: 0.5, far: 9 }); sun.shadow.bias = -0.0006; scene.add(sun);
+  const mat = (color, o = {}) => new THREE.MeshStandardMaterial(Object.assign({ color, roughness: 0.65, metalness: 0.1 }, o));
+  const box = (w, d, h, m, x = 0, y = 0, z = 0, par = scene) => { const g = new THREE.Mesh(new THREE.BoxGeometry(w, d, h), m); g.position.set(x, y, z); g.castShadow = g.receiveShadow = true; par.add(g); return g; };
+  const cyl = (a, b, r, m, par = scene, seg = 10) => { const av = new THREE.Vector3(...a), bv = new THREE.Vector3(...b), L = av.distanceTo(bv), g = new THREE.Mesh(new THREE.CylinderGeometry(r, r, L, seg), m); g.position.copy(av).add(bv).multiplyScalar(0.5); g.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), bv.clone().sub(av).normalize()); g.castShadow = true; par.add(g); return g; };
 
-  function rectW(r, fill, stroke) { const x0 = WX(r[0]), x1 = WX(r[1]), y0 = WY(r[3]), y1 = WY(r[2]); if (fill) { ctx.fillStyle = fill; ctx.fillRect(x0, y0, x1 - x0, y1 - y0); } if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 2; ctx.strokeRect(x0 + 1, y0 + 1, x1 - x0 - 2, y1 - y0 - 2); } }
-  function drawField() {
-    // tiles
-    for (let i = 0; i < 6; i++) for (let j = 0; j < 6; j++) { const k = (i + j) % 2 ? 0 : 6; ctx.fillStyle = `rgb(${108 + k},${112 + k},${118 + k})`; ctx.fillRect(X(i * 24), Y((j + 1) * 24), 24 * scale, 24 * scale); }
-    ctx.strokeStyle = "rgba(40,44,52,.55)"; ctx.lineWidth = 1; ctx.setLineDash([6, 4]);
-    for (let i = 1; i < 6; i++) { ctx.beginPath(); ctx.moveTo(X(i * 24), 0); ctx.lineTo(X(i * 24), W); ctx.moveTo(0, Y(i * 24)); ctx.lineTo(W, Y(i * 24)); ctx.stroke(); }
-    ctx.setLineDash([]);
-    rectW(FIELD.loading.red, "rgba(224,53,43,.25)", "#e0352b"); rectW(FIELD.loading.blue, "rgba(45,108,240,.25)", "#2d6cf0");
-    rectW(FIELD.garden.red, "#e0352b"); rectW(FIELD.garden.blue, "#2d6cf0");
-    // alliance walls
-    ctx.fillStyle = "#c9302a"; ctx.fillRect(0, 0, 4, W); ctx.fillStyle = "#2a5cc9"; ctx.fillRect(W - 4, 0, 4, W);
-    // HIVE frame bars
-    ctx.strokeStyle = "#b9bfc7"; ctx.lineWidth = 3;
-    for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(WX(s * FIELD.frameX), WY(-FIELD.frameY)); ctx.lineTo(WX(s * FIELD.frameX), WY(FIELD.frameY)); ctx.stroke(); }
-    ctx.beginPath(); ctx.moveTo(WX(-FIELD.frameX), WY(0)); ctx.lineTo(WX(FIELD.frameX), WY(0)); ctx.stroke();
-    // HIVE cells (top-down), the up CELL brighter
-    for (const hv of sim.hives) {
-      const up = hv.phi > 0 ? 1 : -1, col = hv.team === "red" ? "224,53,43" : "45,108,240";
-      for (const side of [-1, 1]) {
-        const a = side * FIELD.ub * Math.cos(hv.phi), b = side * FIELD.uo * Math.cos(hv.phi);
-        const x0 = WX(hv.x - FIELD.hw), x1 = WX(hv.x + FIELD.hw), y0 = WY(Math.max(a, b)), y1 = WY(Math.min(a, b));
-        ctx.fillStyle = `rgba(${col},${side === up ? 0.55 : 0.18})`; ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
-        ctx.strokeStyle = `rgba(${col},.9)`; ctx.lineWidth = 1.5; ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
-      }
+  // floor: tiles, seams and tape painted on one texture, to scale
+  (function floor() {
+    const c = document.createElement("canvas"); c.width = c.height = 2048; const x = c.getContext("2d"), px = v => (v + F) / (2 * F) * 2048, py = v => 2048 - px(v);
+    x.fillStyle = "#6f7379"; x.fillRect(0, 0, 2048, 2048);
+    for (let i = 0; i < 6; i++) for (let j = 0; j < 6; j++) { const k = (i + j) % 2 ? 0 : 5; x.fillStyle = `rgb(${108 + k},${112 + k},${118 + k})`; x.fillRect(i * 2048 / 6, j * 2048 / 6, 2048 / 6, 2048 / 6); }
+    x.strokeStyle = "#54585e"; x.lineWidth = 4; x.setLineDash([26, 10]); for (let i = 1; i < 6; i++) { x.beginPath(); x.moveTo(i * 2048 / 6, 0); x.lineTo(i * 2048 / 6, 2048); x.moveTo(0, i * 2048 / 6); x.lineTo(2048, i * 2048 / 6); x.stroke(); } x.setLineDash([]);
+    const tape = (r, col, fill) => { const X0 = px(r[0]), W0 = px(r[1]) - X0, Y0 = py(r[3]), H0 = py(r[2]) - Y0; if (fill) { x.fillStyle = fill; x.fillRect(X0, Y0, W0, H0); } x.strokeStyle = col; x.lineWidth = 12; x.strokeRect(X0 + 6, Y0 + 6, W0 - 12, H0 - 12); };
+    tape(FIELD.loading.red, "#e0352b", "rgba(224,53,43,.28)"); tape(FIELD.loading.blue, "#2d6cf0", "rgba(45,108,240,.28)");
+    for (const [t, col] of [["red", "#e0352b"], ["blue", "#2d6cf0"]]) { const g = FIELD.garden[t]; x.fillStyle = col; x.fillRect(px(g[0]), py(g[3]), px(g[1]) - px(g[0]), py(g[2]) - py(g[3])); }
+    const tex = new THREE.CanvasTexture(c); tex.anisotropy = 8;
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(2 * F, 2 * F), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95 })); m.receiveShadow = true; scene.add(m);
+    const base = new THREE.Mesh(new THREE.PlaneGeometry(16, 16), mat("#12182a", { roughness: 1 })); base.position.z = -0.012; scene.add(base);
+    for (const [s, col] of [[-1, "#c9302a"], [1, "#2a5cc9"]]) { const a = new THREE.Mesh(new THREE.PlaneGeometry(54 * IN, 97 * IN), mat(col, { roughness: 1 })); a.position.set(s * (F + 27 * IN + 0.03), -s * 0.3, -0.008); scene.add(a); }
+  })();
+  // perimeter: 12 in clear walls on rails
+  (function walls() {
+    const clear = mat("#cfe0ee", { transparent: true, opacity: 0.16, depthWrite: false, roughness: 0.1 }), rail = mat("#2b2e34", { metalness: 0.4 }), H = FIELD.wallH;
+    for (const [x, y, w, d] of [[-F - 0.02, 0, 0.04, 2 * F + 0.08], [F + 0.02, 0, 0.04, 2 * F + 0.08], [0, -F - 0.02, 2 * F + 0.08, 0.04], [0, F + 0.02, 2 * F + 0.08, 0.04]]) {
+      const p = box(w < 0.1 ? 0.012 : w, d < 0.1 ? 0.012 : d, H, clear, x, y, H / 2); p.castShadow = false;
+      box(w, d, 0.03, rail, x, y, H); box(w, d, 0.03, rail, x, y, 0.015);
     }
-    // FLOWERS
-    for (const [fx, fy] of FIELD.flowers) { ctx.beginPath(); ctx.arc(WX(fx), WY(fy), 0.062 / IN * scale, 0, 7); ctx.fillStyle = "rgba(213,154,58,.35)"; ctx.fill(); ctx.strokeStyle = "#d59a3a"; ctx.lineWidth = 2; ctx.stroke(); }
-    // axis labels in Pedro inches
-    ctx.fillStyle = "rgba(238,242,251,.75)"; ctx.font = `600 ${Math.max(9, W / 60)}px ${getComputedStyle(document.body).fontFamily}`;
-    for (let i = 0; i <= 144; i += 24) { ctx.fillText(String(i), X(i) + 3, W - 4); if (i) ctx.fillText(String(i), 6, Y(i) + 12); }
-  }
-  function drawShootMap() {
-    if (!$("optShoot").checked) return;
-    if (!shootMap) shootMap = buildShootMap();
-    ctx.fillStyle = "rgba(79,209,139,.28)";
-    for (const [x, y] of shootMap) ctx.fillRect(X(x - 2), Y(y + 2), 4 * scale, 4 * scale);
-  }
-  function drawBalls() {
+    for (const s of [-1, 1]) for (const t of [-1, 1]) box(0.045, 0.045, H + 0.02, rail, s * (F + 0.02), t * (F + 0.02), H / 2);
+  })();
+  // HIVE frame
+  (function frame() {
+    const al = mat("#b9bfc7", { metalness: 0.5, roughness: 0.4 }), fx = FIELD.frameX, fy = FIELD.frameY, pz = FIELD.pivotZ;
+    for (const s of [-1, 1]) { box(0.04, 2 * fy, 0.04, al, s * fx, 0, 0.02); for (const t of [-1, 1]) cyl([s * fx, t * fy, 0.02], [s * fx, 0, pz], 0.014, al); }
+    for (const t of [-1, 1]) box(2 * fx, 0.03, 0.006, mat("#8d939b"), 0, t * fy, 0.004);
+    cyl([-fx, 0, pz], [fx, 0, pz], 0.012, al);
+    for (const t of [-1, 1]) { const b = box(1.0 * fx, 0.012, 0.13, mat("#f1dd6a"), 0, t * 0.12, pz - 0.21); b.rotation.x = t * 0.5; }
+  })();
+  // HIVES: each is a group that tips on its pivot
+  const hiveGroups = (() => { const s0 = new Sim(); s0.reset("red"); return s0.hives; })().map(hv => {
+    const g = new THREE.Group(); g.position.set(hv.x, 0, FIELD.pivotZ); scene.add(g);
+    const col = hv.team === "red" ? "#d8332b" : "#2360d8", panel = hv.team === "red" ? "#ffb4ae" : "#aecbff", ring = mat(col, { roughness: 0.5 }),
+      shell = new THREE.MeshStandardMaterial({ color: panel, transparent: true, opacity: 0.2, side: THREE.DoubleSide, depthWrite: false, roughness: 0.2 }),
+      floorM = new THREE.MeshStandardMaterial({ color: panel, transparent: true, opacity: 0.42, side: THREE.DoubleSide, roughness: 0.4 });
+    const { hw, b0, wall, apex, uo, ub } = FIELD, pts = [[-hw, b0], [hw, b0], [hw, b0 + wall], [0, b0 + apex], [-hw, b0 + wall]], T = 0.014;
+    const shape = new THREE.Shape(pts.map(p => new THREE.Vector2(p[0] * 1.05, p[1] + (p[1] > b0 ? 0.012 : -0.012))));
+    shape.holes.push(new THREE.Path(pts.map(p => new THREE.Vector2(p[0], p[1]))));
+    for (const side of [-1, 1]) {
+      for (const u of [ub, uo]) { const r = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth: T, bevelEnabled: false }), ring); r.rotation.x = Math.PI / 2; r.position.y = side * u + T / 2; r.castShadow = true; g.add(r); }
+      const quad = (a, b, m) => { const geo = new THREE.BufferGeometry(), y0 = side * ub, y1 = side * uo; geo.setAttribute("position", new THREE.Float32BufferAttribute([a[0], y0, a[1], b[0], y0, b[1], b[0], y1, b[1], a[0], y0, a[1], b[0], y1, b[1], a[0], y1, a[1]], 3)); geo.computeVertexNormals(); g.add(new THREE.Mesh(geo, m)); };
+      quad(pts[0], pts[1], floorM); for (let i = 1; i < 5; i++) quad(pts[i], pts[(i + 1) % 5], shell);
+      const back = new THREE.Mesh(new THREE.ShapeGeometry(new THREE.Shape(pts.map(p => new THREE.Vector2(p[0], p[1])))), floorM); back.rotation.x = Math.PI / 2; back.position.y = side * ub; g.add(back);
+      box(0.03, ub, 0.024, mat("#9aa0a8", { metalness: 0.4 }), 0, side * ub / 2, b0 - 0.02, g);
+    }
+    return g;
+  });
+  // FLOWERS
+  (function flowers() {
+    const gold = mat("#d59a3a", { metalness: 0.2 }), green = mat("#4d9a48", { metalness: 0.3, roughness: 0.35 }), blk = mat("#1d1f24");
+    FIELD.flowers.forEach(([x, y]) => {
+      const outward = Math.abs(x) > Math.abs(y) ? [Math.sign(x), 0] : [0, Math.sign(y)];
+      for (const [z, r, m] of [[0.546, 0.062, gold], [0.092, 0.058, blk], [0.006, 0.058, blk]]) { const t = new THREE.Mesh(new THREE.TorusGeometry(r, z > 0.5 ? 0.012 : 0.01, 8, 20), m); t.position.set(x, y, z); t.castShadow = true; scene.add(t); }
+      for (const a of [45, 135, 225, 315]) { const cx = x + 0.058 * Math.cos(a * D2R), cy = y + 0.058 * Math.sin(a * D2R); cyl([cx, cy, 0.092], [cx, cy, 0.546], 0.011, green); }
+      box(0.03, 0.03, 0.09, mat("#a8adb4"), x + outward[0] * 0.06, y + outward[1] * 0.06, 0.05);
+    });
+  })();
+  // balls: dimpled so you can see them roll
+  const ballTex = (() => { const c = document.createElement("canvas"); c.width = 256; c.height = 128; const x = c.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, 256, 128); x.fillStyle = "rgba(0,0,0,.42)"; for (let j = 0; j < 6; j++) for (let i = 0; i < 12; i++) { x.beginPath(); x.ellipse((i + (j % 2) * 0.5) * 256 / 12, (j + 0.5) * 128 / 6, 5, 7, 0, 0, 7); x.fill(); } return new THREE.CanvasTexture(c); })();
+  const ballGeo = new THREE.SphereGeometry(1, 20, 14), ballMats = { pollen: mat("#f6d21f", { map: ballTex }), red: mat("#de3128", { map: ballTex }), blue: mat("#2a64e0", { map: ballTex }) }, ballMesh = new Map();
+  const stockG = new THREE.Group(); scene.add(stockG);
+  let stockSig = "";
+  function syncBalls(all) {
+    if (all) { for (const m of ballMesh.values()) scene.remove(m); ballMesh.clear(); stockSig = ""; }
+    const seen = new Set();
     for (const b of sim.balls) {
-      if (b.state === "out") continue;
-      ctx.beginPath(); ctx.arc(WX(b.x), WY(b.y), Math.max(2.5, b.r / IN * scale), 0, 7);
-      ctx.fillStyle = b.kind === "pollen" ? "#f6d21f" : b.team === "blue" ? "#2a64e0" : "#de3128";
-      ctx.globalAlpha = b.state === "held" ? 0.8 : 1; ctx.fill(); ctx.globalAlpha = 1;
-      ctx.strokeStyle = "rgba(0,0,0,.45)"; ctx.lineWidth = 1; ctx.stroke();
+      let m = ballMesh.get(b.id);
+      if (!m) { m = new THREE.Mesh(ballGeo, b.kind === "pollen" ? ballMats.pollen : ballMats[b.team || "red"]); m.scale.setScalar(b.r); m.castShadow = true; scene.add(m); ballMesh.set(b.id, m); }
+      seen.add(b.id); m.visible = b.state !== "out"; m.position.set(b.x, b.y, b.z);
     }
+    for (const [id, m] of ballMesh) if (!seen.has(id)) { scene.remove(m); ballMesh.delete(id); }
+    const sig = sim.stock.red + "," + sim.stock.blue; if (sig === stockSig) return; stockSig = sig;   // NECTAR waiting at the alliance walls
+    while (stockG.children.length) stockG.remove(stockG.children[0]);
+    for (const t of ["red", "blue"]) for (let i = 0; i < sim.stock[t]; i++) { const s = t === "red" ? -1 : 1, m = new THREE.Mesh(ballGeo, ballMats[t]); m.scale.setScalar(KIND.nectar.r); m.position.set(s * (F + 0.1 + (i % 2) * 0.09), -0.16 + i * 0.08, KIND.nectar.r); stockG.add(m); }
   }
-  function drawRobotAt(px, py, h, ghost, turret) {
-    const c = Math.cos(h), s = Math.sin(h), hx = R.halfX / IN, fr = R.front / IN;   // robot: 454 x 450 mm
-    const corner = (f, r) => [X(px + f * c + r * s), Y(py + f * s - r * c)];
-    ctx.beginPath(); [[fr, -hx], [fr, hx], [-fr, hx], [-fr, -hx]].forEach((p, i) => { const q = corner(p[0], p[1]); i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); }); ctx.closePath();
-    ctx.fillStyle = ghost ? "rgba(22,49,110,.25)" : "rgba(22,49,110,.85)"; ctx.fill();
-    ctx.strokeStyle = ghost ? "rgba(244,196,48,.6)" : "#eef2fb"; ctx.lineWidth = ghost ? 1.5 : 2; ctx.setLineDash(ghost ? [5, 4] : []); ctx.stroke(); ctx.setLineDash([]);
-    // front edge (intake)
-    const a = corner(fr, -hx), b = corner(fr, hx); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.strokeStyle = "#f4c430"; ctx.lineWidth = 4; ctx.stroke();
-    if (turret != null) { const o = [X(px + 0.83 * c), Y(py + 0.83 * s)], L = 11; ctx.beginPath(); ctx.moveTo(o[0], o[1]); ctx.lineTo(o[0] + L * scale * Math.cos(turret), o[1] - L * scale * Math.sin(turret)); ctx.strokeStyle = "#4fd18b"; ctx.lineWidth = 3; ctx.stroke(); }
+  function roll(dt) { for (const b of sim.balls) { const m = ballMesh.get(b.id); if (!m || b.state === "held") continue; const v = Math.hypot(b.vx, b.vy); if (v > 0.02 && b.z < b.r + 0.01) { const axis = new THREE.Vector3(-b.vy / v, b.vx / v, 0); m.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(axis, v / b.r * dt)); } } }
+
+  // the aim arc, while the flywheel is on and a ball is held
+  const arcGeo = new THREE.BufferGeometry(), arcPos = new Float32Array(3 * 80); arcGeo.setAttribute("position", new THREE.BufferAttribute(arcPos, 3));
+  const arc = new THREE.Line(arcGeo, new THREE.LineBasicMaterial({ color: 0xf4c430 })); arc.frustumCulled = false; scene.add(arc);
+  function drawArc() {
+    const top = sim.held[0]; arc.visible = !!top && !!(running && runner && runner.mech.flyOn);
+    if (!arc.visible) return;
+    const p = sim.pathPos({ ...top, s: R.sT + sim.pathExtra(top) }), [x0, y0] = sim.toWorld(p.bx, p.by), eff = top.kind === "nectar" ? sim.p.effN : sim.p.effP, v = eff * sim.fly * R.wheelD / 2, e = sim.hood * D2R, th = sim.yaw + sim.rob.th;
+    let x = x0, y = y0, z = p.z, vx = v * Math.cos(e) * Math.cos(th) + sim.rob.vx, vy = v * Math.cos(e) * Math.sin(th) + sim.rob.vy, vz = v * Math.sin(e); const k = 0.5 * 1.2 * 0.47 * Math.PI * top.r * top.r / top.m, dt = 0.03; let n = 0;
+    for (; n < 80; n++) { arcPos[n * 3] = x; arcPos[n * 3 + 1] = y; arcPos[n * 3 + 2] = z; if (z < 0.02) { n++; break; } const sp = Math.hypot(vx, vy, vz); vx -= k * sp * vx * dt; vy -= k * sp * vy * dt; vz -= (9.81 + k * sp * vz) * dt; x += vx * dt; y += vy * dt; z += vz * dt; }
+    arcGeo.setDrawRange(0, n); arcGeo.attributes.position.needsUpdate = true;
   }
+
+  // the robot: a stand-in box until the CAD meshes load
+  const robot = new THREE.Group(); scene.add(robot);
+  const standIn = new THREE.Group(); robot.add(standIn);
+  box(2 * R.halfX, 2 * R.front, 0.09, mat("#16316e"), 0, 0, 0.07, standIn); box(2 * R.halfX, 0.03, 0.05, mat("#f4c430"), 0, -R.front + 0.015, 0.05, standIn);
+  const origin = new THREE.Group(); origin.scale.setScalar(0.001); origin.position.set(0, R.turretY, R.turretZ); robot.add(origin);
+  const turretG = new THREE.Group(), hoodG = new THREE.Group(), wheelG = new THREE.Group(), rollerG = new THREE.Group(), chassisG = new THREE.Group();
+  origin.add(chassisG, turretG, rollerG); turretG.add(hoodG, wheelG);
+  const groups = { chassis: chassisG, fixed: chassisG, turret: turretG, hood: hoodG, wheel: wheelG, roller: rollerG };
+  function unpack(q) {
+    const bin = atob(q.d), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    const a = new Uint16Array(u.buffer), f = new Float32Array(a.length); for (let i = 0; i < a.length; i++) f[i] = q.o[i % 3] + a[i] * q.s[i % 3];
+    const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.BufferAttribute(f, 3)); geo.computeVertexNormals(); return geo;
+  }
+  fetch("robotData.json").then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).then(d => {
+    hoodG.position.set(d.ax[0], 0, d.ax[1]); wheelG.position.copy(hoodG.position); rollerG.position.set(0, d.rollerAxis[0], d.rollerAxis[1]);
+    for (const q of d.meshes) { const m = new THREE.Mesh(unpack(q.m), mat(q.color, { metalness: 0.2, roughness: 0.6, side: THREE.DoubleSide })); m.castShadow = true; m.receiveShadow = q.group === "chassis"; groups[q.group].add(m); }
+    robot.remove(standIn); $("loading").hidden = true;
+  }).catch(() => { $("loading").textContent = "The robot's CAD model didn't load, so a plain box stands in. Everything else works."; });
+
+  // overlay painted on the floor: where you can shoot from, the last run's track, Pedro inch marks
+  const ov = document.createElement("canvas"); ov.width = ov.height = 1024; const octx = ov.getContext("2d"), ovTex = new THREE.CanvasTexture(ov); ovTex.anisotropy = 4;
+  const ovMesh = new THREE.Mesh(new THREE.PlaneGeometry(2 * F, 2 * F), new THREE.MeshBasicMaterial({ map: ovTex, transparent: true, depthWrite: false })); ovMesh.position.z = 0.002; ovMesh.renderOrder = 1; scene.add(ovMesh);
+  const OX = px => px / 144 * 1024, OY = py => 1024 - py / 144 * 1024;
+  let ovSig = "";
+  function drawOverlay() {
+    const sig = [$("optShoot").checked, auto.alliance, $("optTrace").checked, trace.length >> 2].join();
+    if (sig === ovSig) return; ovSig = sig;
+    octx.clearRect(0, 0, 1024, 1024);
+    if ($("optShoot").checked) { if (!shootMap) shootMap = buildShootMap(); octx.fillStyle = "rgba(79,209,139,.4)"; for (const [x, y] of shootMap) octx.fillRect(OX(x - 2) + 1, OY(y + 2) + 1, 4 / 144 * 1024 - 2, 4 / 144 * 1024 - 2); }
+    if ($("optTrace").checked && trace.length > 1) { octx.beginPath(); trace.forEach((p, k) => k ? octx.lineTo(OX(p.x), OY(p.y)) : octx.moveTo(OX(p.x), OY(p.y))); octx.strokeStyle = "rgba(79,209,139,.95)"; octx.lineWidth = 5; octx.lineJoin = octx.lineCap = "round"; octx.stroke(); }
+    octx.fillStyle = "rgba(238,242,251,.85)"; octx.font = "700 19px Figtree, system-ui, sans-serif"; octx.textBaseline = "alphabetic";
+    for (let i = 0; i <= 144; i += 24) { octx.textAlign = i === 144 ? "right" : "left"; octx.fillText(String(i), OX(i) + (i === 144 ? -5 : 5), 1018); if (i) { octx.textAlign = "left"; octx.fillText(String(i), 6, OY(i) + (i === 144 ? 20 : 7)); } }
+    ovTex.needsUpdate = true;
+  }
+
+  // the planned paths: honey ribbons on the floor, a numbered marker at each end, heading arrows, curve-point cubes
+  const P = (x, y, z = 0) => new THREE.Vector3(x * IN - F, y * IN - F, z);
+  const HON = 0xf4c430, mHon = new THREE.MeshBasicMaterial({ color: HON }), mHonDim = new THREE.MeshBasicMaterial({ color: HON, transparent: true, opacity: 0.55 }),
+    mWhite = new THREE.MeshBasicMaterial({ color: 0xeef2fb }), mFoot = new THREE.MeshBasicMaterial({ color: HON, transparent: true, opacity: 0.13, depthWrite: false, side: THREE.DoubleSide }),
+    mStart = new THREE.MeshBasicMaterial({ color: 0x4fd18b }), mGhost = new THREE.LineBasicMaterial({ color: HON, transparent: true, opacity: 0.75 }), mDash = new THREE.LineDashedMaterial({ color: 0xeef2fb, dashSize: 0.04, gapSize: 0.03, transparent: true, opacity: 0.55 });
+  const cubeGeo = new THREE.BoxGeometry(0.05, 0.05, 0.05), puckGeo = new THREE.CylinderGeometry(0.045, 0.045, 0.012, 24), coneGeo = new THREE.ConeGeometry(0.03, 0.07, 14), shaftGeo = new THREE.CylinderGeometry(0.009, 0.009, 1, 8), ringGeo = new THREE.RingGeometry(0.05, 0.07, 32);
+  puckGeo.rotateX(Math.PI / 2);
+  const pathG = new THREE.Group(); scene.add(pathG);
+  const labelCache = new Map();
+  function label(text, on, start) {
+    const key = text + on + start; if (labelCache.has(key)) return labelCache.get(key);
+    const c = document.createElement("canvas"); c.width = c.height = 96; const x = c.getContext("2d");
+    x.beginPath(); x.arc(48, 48, 40, 0, 7); x.fillStyle = start ? "#4fd18b" : on ? "#f4c430" : "#13224a"; x.fill(); x.lineWidth = 7; x.strokeStyle = start ? "#0c1630" : "#f4c430"; x.stroke();
+    x.fillStyle = start || on ? "#14203f" : "#f4c430"; x.font = "700 46px Figtree, system-ui, sans-serif"; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(text, 48, 51);
+    const m = new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false, transparent: true }); labelCache.set(key, m); return m;
+  }
+  function clearPaths() { while (pathG.children.length) { const c = pathG.children.pop(); c.traverse(o => { if (o.userData.own && o.geometry) o.geometry.dispose(); }); } }
+  function own(mesh) { mesh.userData.own = true; return mesh; }
+  function arrow(x, y, h, m, len = 0.17) {   // a heading arrow lying just above the floor
+    const g = new THREE.Group(); g.position.copy(P(x, y, 0.035)); g.rotation.z = h - Math.PI / 2;
+    const s = new THREE.Mesh(shaftGeo, m); s.scale.y = len - 0.06; s.position.y = (len - 0.06) / 2; g.add(s);
+    const c = new THREE.Mesh(coneGeo, m); c.position.y = len - 0.035; g.add(c); pathG.add(g);
+  }
+  function footprint(x, y, h, m) {   // the robot's 454 x 450 mm outline at a pose
+    const w = P(x, y, 0.004), th = h + Math.PI / 2, hx = R.halfX, fr = R.front, c = Math.cos(th), s = Math.sin(th);
+    const pts = [[-hx, -fr], [hx, -fr], [hx, fr], [-hx, fr], [-hx, -fr]].map(([bx, by]) => new THREE.Vector3(w.x + bx * c - by * s, w.y + bx * s + by * c, 0.006));
+    pathG.add(own(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), m)));
+    const f = own(new THREE.Mesh(new THREE.PlaneGeometry(2 * hx, 2 * fr), mFoot)); f.position.set(w.x, w.y, 0.004); f.rotation.z = th; pathG.add(f);
+  }
+  function sprite(x, y, m, size = 0.085) { const s = new THREE.Sprite(m); s.position.copy(P(x, y, 0.09)); s.scale.set(size, size, 1); s.renderOrder = 5; pathG.add(s); }
+  let handles = [], pathSig = "";
   function lastPoseOf(i) { for (let k = i - 1; k >= 0; k--) { const s = auto.steps[k]; if (s.type === "path") return { x: s.x, y: s.y, h: s.heading === "tangent" ? tangentEnd(auto, k) : s.h }; } return auto.start; }
-  function drawPaths() {
-    handles = [];
-    const st = auto.start; drawRobotAt(st.x, st.y, st.h * D2R, true);
+  function buildPaths() {
+    const sig = JSON.stringify(auto) + "|" + sel + "|" + (running && runner ? runner.i : -1);
+    if (sig === pathSig) return; pathSig = sig; clearPaths(); handles = [];
+    const st = auto.start;
+    footprint(st.x, st.y, st.h * D2R, mGhost); arrow(st.x, st.y, st.h * D2R, mStart, 0.2);
+    const rg = new THREE.Mesh(ringGeo, mStart); rg.position.copy(P(st.x, st.y, 0.01)); pathG.add(rg); sprite(st.x, st.y, label("S", false, true), 0.1);
     handles.push({ kind: "start", x: st.x, y: st.y });
     auto.steps.forEach((s, i) => {
       if (s.type !== "path") return;
-      const a = lastPoseOf(i), pts = [{ x: a.x, y: a.y }, ...s.controls, { x: s.x, y: s.y }], on = i === sel;
-      if (s.controls.length) { ctx.beginPath(); pts.forEach((p, k) => k ? ctx.lineTo(X(p.x), Y(p.y)) : ctx.moveTo(X(p.x), Y(p.y))); ctx.strokeStyle = "rgba(238,242,251,.35)"; ctx.lineWidth = 1; ctx.setLineDash([4, 4]); ctx.stroke(); ctx.setLineDash([]); }
-      ctx.beginPath(); for (let k = 0; k <= 60; k++) { const p = bez(pts, k / 60); k ? ctx.lineTo(X(p.x), Y(p.y)) : ctx.moveTo(X(p.x), Y(p.y)); }
-      ctx.strokeStyle = on ? "#f4c430" : "rgba(244,196,48,.6)"; ctx.lineWidth = on ? 3.5 : 2.5; ctx.stroke();
-      // end pose arrow
-      const h = s.heading === "tangent" ? tangentEnd(auto, i) * D2R : s.h * D2R, ex = X(s.x), ey = Y(s.y);
-      ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(ex + 16 * Math.cos(h), ey - 16 * Math.sin(h)); ctx.strokeStyle = "#eef2fb"; ctx.lineWidth = 2; ctx.stroke();
-      ctx.beginPath(); ctx.arc(ex, ey, on ? 7 : 6, 0, 7); ctx.fillStyle = on ? "#f4c430" : "#13224a"; ctx.fill(); ctx.strokeStyle = "#f4c430"; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = on ? "#14203f" : "#f4c430"; ctx.font = `700 10px ${getComputedStyle(document.body).fontFamily}`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(String(i + 1), ex, ey + 0.5); ctx.textAlign = "start"; ctx.textBaseline = "alphabetic";
+      const a = lastPoseOf(i), pts = [{ x: a.x, y: a.y }, ...s.controls, { x: s.x, y: s.y }], on = i === sel, now = running && runner && runner.i === i;
+      const samples = []; for (let k = 0; k <= 80; k++) { const p = bez(pts, k / 80); samples.push(P(p.x, p.y, 0.012)); }
+      if (Math.hypot(s.x - a.x, s.y - a.y) > 0.3 || s.controls.length) pathG.add(own(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(samples), 160, on || now ? 0.014 : 0.009, 6, false), on || now ? mHon : mHonDim)));
+      if (s.controls.length) { const l = own(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts.map(p => P(p.x, p.y, 0.02))), mDash)); l.computeLineDistances(); pathG.add(l); }
+      const h = s.heading === "tangent" ? tangentEnd(auto, i) * D2R : s.h * D2R;
+      footprint(s.x, s.y, h, on ? mGhost : new THREE.LineBasicMaterial({ color: HON, transparent: true, opacity: 0.25 }));
+      arrow(s.x, s.y, h, mWhite);
+      const pk = new THREE.Mesh(puckGeo, on ? mHon : mHonDim); pk.position.copy(P(s.x, s.y, 0.012)); pk.castShadow = true; pathG.add(pk);
+      sprite(s.x, s.y, label(String(i + 1), on, false), on ? 0.13 : 0.11);
       handles.push({ kind: "end", i, x: s.x, y: s.y });
-      s.controls.forEach((c, ci) => { ctx.fillStyle = on ? "#f4c430" : "rgba(244,196,48,.55)"; ctx.fillRect(X(c.x) - 4.5, Y(c.y) - 4.5, 9, 9); handles.push({ kind: "ctrl", i, ci, x: c.x, y: c.y }); });
+      s.controls.forEach((c, ci) => { const m = new THREE.Mesh(cubeGeo, on ? mHon : mHonDim); m.position.copy(P(c.x, c.y, 0.03)); m.rotation.z = Math.PI / 4; m.castShadow = true; pathG.add(m); handles.push({ kind: "ctrl", i, ci, x: c.x, y: c.y }); });
     });
   }
-  function drawTrace() {
-    if (!$("optTrace").checked || trace.length < 2) return;
-    ctx.beginPath(); trace.forEach((p, k) => k ? ctx.lineTo(X(p.x), Y(p.y)) : ctx.moveTo(X(p.x), Y(p.y)));
-    ctx.strokeStyle = "rgba(79,209,139,.9)"; ctx.lineWidth = 2; ctx.stroke();
-  }
-  function draw() {
-    ctx.clearRect(0, 0, W, W);
-    drawField(); drawShootMap(); drawPaths(); drawTrace(); drawBalls();
-    const p = toPedro(sim.rob.x, sim.rob.y, sim.rob.th);
-    drawRobotAt(p.x, p.y, p.h, false, sim.yaw + sim.rob.th);
-    $("clock").textContent = simT.toFixed(1); $("tl").style.width = (100 * Math.min(1, simT / AUTO_LEN)) + "%";
-  }
 
-  // ---------------------------------------------------------------- field editing
-  let drag = null;
-  const toIn = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) / scale, y: (r.height - (e.clientY - r.top)) / scale }; };
+  // ---------------------------------------------------------------- cameras
+  const VIEWS = { plan: "Plan", orbit: "3D", driver: "Driver", chase: "Chase" };
+  let view = "plan"; try { const v = localStorage.getItem("autolab-view"); if (VIEWS[v]) view = v; } catch (e) {}
+  const orb = { yaw: -Math.PI / 2, pitch: 0.82, dist: 4.4 };
+  const lookAt = new THREE.Vector3(), camPos = new THREE.Vector3(); let snapCam = true;
+  const cam = () => view === "plan" ? ocam : pcam;
+  function setView(v) {
+    view = v; snapCam = true; try { localStorage.setItem("autolab-view", v); } catch (e) {}
+    document.querySelectorAll("[data-view]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.view === v)));
+    $("viewHint").textContent = v === "plan" ? "Top-down, for drawing paths." : v === "orbit" ? "Drag the floor to turn the view, scroll to zoom. The dots still drag." : v === "driver" ? "From behind your alliance wall, like the drive team." : "Follows the robot. Switch to Plan or 3D to edit.";
+  }
+  document.querySelectorAll("[data-view]").forEach(b => b.addEventListener("click", () => setView(b.dataset.view)));
+  function placeCamera(dt) {
+    if (view === "plan") return;
+    const r = sim.rob, s = auto.alliance === "red" ? -1 : 1; let px, py, pz, lx, ly, lz;
+    if (view === "orbit") { const c = Math.cos(orb.pitch); px = orb.dist * c * Math.cos(orb.yaw); py = orb.dist * c * Math.sin(orb.yaw); pz = orb.dist * Math.sin(orb.pitch); lx = ly = 0; lz = 0; }
+    else if (view === "driver") { px = s * (F + 1.15); py = r.y * 0.35 - s * 0.3; pz = 1.62; lx = r.x * 0.72; ly = r.y * 0.72; lz = 0.25; }
+    else { const dx = Math.sin(r.th), dy = -Math.cos(r.th); px = Math.max(-F + 0.04, Math.min(F - 0.04, r.x - dx * 1.35)); py = Math.max(-F + 0.04, Math.min(F - 0.04, r.y - dy * 1.35)); pz = 0.95; lx = r.x + dx * 0.7; ly = r.y + dy * 0.7; lz = 0.25; }
+    const k = snapCam || view === "orbit" ? 1 : Math.min(1, dt * (view === "chase" ? 5 : 3)); snapCam = false;
+    camPos.lerp(new THREE.Vector3(px, py, pz), k); lookAt.lerp(new THREE.Vector3(lx, ly, lz), k);
+    pcam.position.copy(camPos); pcam.up.set(0, 0, 1); pcam.lookAt(lookAt);
+  }
+  function resize() {
+    const w = stage.clientWidth, h = stage.clientHeight; if (!w || !h) return;
+    renderer.setSize(w, h, false); const a = w / h, m = F + 0.13;
+    pcam.aspect = a; pcam.fov = a < 1 ? 62 : 46; pcam.updateProjectionMatrix();
+    if (a >= 1) Object.assign(ocam, { left: -m * a, right: m * a, top: m, bottom: -m }); else Object.assign(ocam, { left: -m, right: m, top: m / a, bottom: -m / a });
+    ocam.updateProjectionMatrix();
+  }
+  new ResizeObserver(resize).observe(stage); resize();
+
+  // ---------------------------------------------------------------- field editing: drag the markers on the floor
+  const ray = new THREE.Raycaster(), floorPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -0.02), hitV = new THREE.Vector3();
+  const canEdit = () => view !== "chase";
+  function floorAt(e) {
+    const r = cv.getBoundingClientRect(); ray.setFromCamera(new THREE.Vector2((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1), cam());
+    if (!ray.ray.intersectPlane(floorPlane, hitV)) return null; return { x: (hitV.x + F) / IN, y: (hitV.y + F) / IN };
+  }
+  function pick(e) {
+    if (!canEdit()) return null;
+    const r = cv.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top; let best = null, bd = e.pointerType === "touch" ? 26 : 16;
+    for (const h of handles) { const v = P(h.x, h.y, 0.03).project(cam()); if (v.z > 1) continue; const d = Math.hypot((v.x + 1) / 2 * r.width - mx, (1 - v.y) / 2 * r.height - my); if (d < bd) { bd = d; best = h; } }
+    return best;
+  }
   const snap = v => Math.round(Math.min(144, Math.max(0, v)) * 2) / 2;
+  let drag = null, orbitDrag = null;
   cv.addEventListener("pointerdown", e => {
-    const p = toIn(e); let best = null, bd = 14 / scale;
-    for (const h of handles) { const d = Math.hypot(h.x - p.x, h.y - p.y); if (d < bd) { bd = d; best = h; } }
-    if (!best) return;
-    if (running) resetSim();
-    drag = best; if (best.i != null) { sel = best.i; renderSteps(); }
-    cv.setPointerCapture(e.pointerId); e.preventDefault();
+    const best = pick(e);
+    if (best) {
+      if (running) resetSim();
+      drag = best; if (best.i != null && sel !== best.i) { sel = best.i; renderSteps(); }
+      cv.setPointerCapture(e.pointerId); e.preventDefault(); return;
+    }
+    if (view === "orbit") { orbitDrag = { x: e.clientX, y: e.clientY, yaw: orb.yaw, pitch: orb.pitch }; cv.setPointerCapture(e.pointerId); cv.style.cursor = "grabbing"; e.preventDefault(); }
   });
   cv.addEventListener("pointermove", e => {
-    const p = toIn(e); $("cursor").textContent = `x ${snap(p.x).toFixed(1)}  y ${snap(p.y).toFixed(1)}`;
-    if (!drag) return;
+    if (orbitDrag) { orb.yaw = orbitDrag.yaw - (e.clientX - orbitDrag.x) * 0.008; orb.pitch = Math.max(0.12, Math.min(1.5, orbitDrag.pitch + (e.clientY - orbitDrag.y) * 0.006)); return; }
+    const p = floorAt(e), inField = p && p.x >= 0 && p.x <= 144 && p.y >= 0 && p.y <= 144;
+    $("cursor").textContent = inField ? `x ${snap(p.x).toFixed(1)}  y ${snap(p.y).toFixed(1)}` : "";
+    if (!drag) { cv.style.cursor = pick(e) ? "grab" : view === "orbit" ? "move" : ""; return; }
+    if (!p) return; cv.style.cursor = "grabbing";
     const x = snap(p.x), y = snap(p.y);
     if (drag.kind === "start") { auto.start.x = x; auto.start.y = y; placeRobot(sim, auto.start); }
     else if (drag.kind === "end") { auto.steps[drag.i].x = x; auto.steps[drag.i].y = y; }
     else auto.steps[drag.i].controls[drag.ci] = { x, y };
     syncForm(); renderStepsLight();
   });
-  const endDrag = () => { if (drag) { drag = null; changed(); } };
+  const endDrag = () => { orbitDrag = null; cv.style.cursor = ""; if (drag) { drag = null; changed(); } };
   cv.addEventListener("pointerup", endDrag); cv.addEventListener("pointercancel", endDrag);
   cv.addEventListener("pointerleave", () => { if (!drag) $("cursor").textContent = ""; });
+  cv.addEventListener("wheel", e => { if (view !== "orbit") return; e.preventDefault(); orb.dist = Math.max(1.6, Math.min(8, orb.dist * Math.exp(e.deltaY * 0.0012))); }, { passive: false });
   cv.addEventListener("dblclick", e => {
-    const p = toIn(e), a = lastPoseOf(auto.steps.length);
+    if (!canEdit()) return; const p = floorAt(e); if (!p || p.x < 0 || p.x > 144 || p.y < 0 || p.y > 144) return;
+    const a = lastPoseOf(auto.steps.length);
     auto.steps.push({ type: "path", x: snap(p.x), y: snap(p.y), h: a.h, heading: "linear", controls: [], maxPower: 1 });
     sel = auto.steps.length - 1; changed();
   });
+
+  // one frame of the 3D view
+  let ballsFor = null;
+  function draw(dt) {
+    if (ballsFor !== sim) { ballsFor = sim; syncBalls(true); }
+    buildPaths(); drawOverlay();
+    const r = sim.rob, live = running && !paused, k = live ? Number($("speed").value) : 0;
+    robot.position.set(r.x, r.y, 0); robot.rotation.z = r.th;
+    turretG.rotation.z = sim.yaw; hoodG.rotation.y = -(sim.hood - 25) * D2R; wheelG.rotation.y -= sim.fly * dt * k * 0.4; rollerG.rotation.x = sim.flapA;
+    sim.hives.forEach((h, i) => { if (hiveGroups[i]) hiveGroups[i].rotation.x = h.phi; });
+    syncBalls(); roll(dt * k); drawArc(); placeCamera(dt);
+    renderer.render(scene, cam());
+    $("clock").textContent = simT.toFixed(1); $("tl").style.width = (100 * Math.min(1, simT / AUTO_LEN)) + "%";
+  }
+  setView(view);
 
   // ---------------------------------------------------------------- panel
   const STEP_NAMES = { path: "Path", shoot: "Shoot", intake: "Intake", flywheel: "Flywheel", wait: "Wait" };
@@ -614,7 +788,7 @@ details summary { cursor: pointer; font: 700 15px var(--disp); letter-spacing: .
 
   // ---------------------------------------------------------------- start
   let last = performance.now();
-  function frame(now) { const dt = Math.min(0.1, (now - last) / 1000); last = now; tick(dt); draw(); requestAnimationFrame(frame); }
+  function frame(now) { const dt = Math.min(0.1, (now - last) / 1000); last = now; tick(dt); draw(dt); requestAnimationFrame(frame); }
   syncForm(); resetSim(); renderJava(); renderJson(); requestAnimationFrame(frame);
 })();
 </script>

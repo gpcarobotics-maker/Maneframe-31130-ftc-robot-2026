@@ -6,4 +6,6 @@ Live page: https://claude.ai/artifact/EsGvvBmmtKn4Ryt5jtRJxa
 - `autorun.js`: the Pedro-style follower and auto runner (also runs under Node)
 - The physics (`SimCore`) is copied unchanged from `docs/BioBuzz Test Drive.html` (the script that starts "BioBuzz test drive: physics")
 
+The field is 3D (three.js r128, the Test Drive sim's scene and CAD robot) with Plan, 3D, Driver and Chase views. It needs `robotData.json` next to it, the same file as the Build Book: the JSON inside the `<script id="robotData">` tag of `docs/BioBuzz Test Drive.html`.
+
 To rebuild `index.html`, replace `/*__SIMCORE__*/` with that script and `/*__AUTORUN__*/` with `autorun.js`.
