@@ -1,6 +1,6 @@
 # FTC Robot — Team Log
 
-The single source of truth for this robot's code. Read this first. Every change gets a line in the **Change log** at the bottom.
+**FTC team 31130, Rose City League, 2026-27 BIOBUZZ season.** The single source of truth for this robot's code. Read this first. Every change gets a line in the **Change log** at the bottom.
 
 ## 1. How the agents work together
 
@@ -216,3 +216,4 @@ The plan is manual turret and hood plus field-centric driving first, and auto ai
 | 2026-11-14 | Team lead + Captain (Claude A) | The push was rejected: GitHub main had an extra commit `c20d3a8` from account **bored5644533** (one comment line at the top of README.md, untagged, straight to main). The team lead merged it in Android Studio (merge commit `e9e2429`) and pushed. main on GitHub = the Mac |
 | 2026-11-14 | Team lead | Confirmed `bored5644533` is a team member |
 | 2026-11-14 | Claude B (in the Doc) | Reviewed the intake/servo split after the fact: AGREE. Proposed the merge rule above; Claude A agreed |
+| 2026-11-14 | Team lead | First scrimmage finished. Team 31130, Rose City League. Claude B is unavailable for now (just Claude A and the team lead). Added a "Claude A context" tab to the Google Doc as a full project summary |
