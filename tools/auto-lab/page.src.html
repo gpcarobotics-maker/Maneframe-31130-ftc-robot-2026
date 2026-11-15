@@ -51,6 +51,11 @@ h2 { font: 700 15px/1.2 var(--disp); letter-spacing: .08em; text-transform: uppe
 .timeline { height: 8px; border-radius: 4px; background: var(--bg); position: relative; overflow: hidden; }
 .timeline i { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--honey); }
 .status { font-size: 13px; min-height: 1.4em; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12.5px; color: var(--mute); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend .sw { width: 18px; height: 4px; border-radius: 2px; display: inline-block; }
+.legend .sw.ok { background: var(--honey); } .legend .sw.bad { background: var(--red); }
+.legend .sw.bump { height: 10px; background: transparent; border: 2px dashed var(--warn); border-radius: 5px; }
 .status.warn { color: var(--warn); }
 
 .side { display: grid; gap: 12px; min-width: 0; }
@@ -108,11 +113,12 @@ details summary { cursor: pointer; font: 700 15px var(--disp); letter-spacing: .
       <div class="loading" id="loading">Loading the robot…</div>
     </div>
     <div class="timeline"><i id="tl"></i></div>
+    <div class="legend"><span><i class="sw ok"></i>Yellow path: fine</span><span><i class="sw bad"></i>Red path with <b>!</b>: the robot got stuck there in a test run</span><span><i class="sw bump"></i>Dashed outline: where the robot can bump the HIVE frame or a FLOWER (shown while you drag)</span></div>
     <div class="status" id="status" aria-live="polite">Drag the numbered dots to move where each path ends, and the small cubes to bend it. Double-click the floor to add a path that ends there.</div>
     <div class="fieldbar">
       <label><input type="checkbox" id="optShoot"> Where you can shoot from</label>
       <label><input type="checkbox" id="optTrace" checked> Last run's track</label>
-      <label><input type="checkbox" id="optKeep" checked> Keep-out zones</label>
+      <label><input type="checkbox" id="optKeep"> Always show bump zones</label>
       <span id="viewHint"></span>
       <span id="cursor" class="mono"></span>
     </div>
@@ -404,18 +410,18 @@ details summary { cursor: pointer; font: 700 15px var(--disp); letter-spacing: .
   const OX = px => px / 144 * 1024, OY = py => 1024 - py / 144 * 1024;
   let ovSig = "";
   function drawOverlay() {
-    const sig = [$("optShoot").checked, auto.alliance, $("optTrace").checked, $("optKeep").checked, trace.length >> 2].join();
+    const anyRed = !!(dry && dry.done && dry.sig === JSON.stringify(auto) && Object.keys(dry.bad).length);
+    const showBump = $("optKeep").checked || !!drag || anyRed;
+    const sig = [$("optShoot").checked, auto.alliance, $("optTrace").checked, showBump, trace.length >> 2].join();
     if (sig === ovSig) return; ovSig = sig;
     octx.clearRect(0, 0, 1024, 1024);
     if ($("optShoot").checked) { if (!shootMap) shootMap = buildShootMap(); octx.fillStyle = "rgba(79,209,139,.4)"; for (const [x, y] of shootMap) octx.fillRect(OX(x - 2) + 1, OY(y + 2) + 1, 4 / 144 * 1024 - 2, 4 / 144 * 1024 - 2); }
-    if ($("optKeep").checked) {   // where the robot's centre can't go at any heading: obstacles grown by half the robot
-      const g = Math.min(HW, HL), pat = octx.createPattern((() => { const c = document.createElement("canvas"); c.width = c.height = 16; const x = c.getContext("2d"); x.strokeStyle = "rgba(236,90,80,.55)"; x.lineWidth = 3; x.beginPath(); x.moveTo(-4, 20); x.lineTo(20, -4); x.stroke(); return c; })(), "repeat");
-      octx.fillStyle = pat; octx.strokeStyle = "rgba(236,90,80,.85)"; octx.lineWidth = 2.5; octx.beginPath();
+    if (showBump) {   // where the robot's centre would bump the frame bars or FLOWER posts: obstacles grown by half the robot
+      const g = Math.min(HW, HL);
+      octx.beginPath();
       for (const [bx, y0, y1] of BARS) { const r = 0.8 + g; octx.roundRect ? octx.roundRect(OX(bx - r), OY(y1 + g), OX(2 * r), OX(y1 - y0 + 2 * g), OX(g)) : octx.rect(OX(bx - r), OY(y1 + g), OX(2 * r), OX(y1 - y0 + 2 * g)); }
       for (const [fx, fy] of FLOWERS) { octx.moveTo(OX(fx + FLOWER_R + g), OY(fy)); octx.arc(OX(fx), OY(fy), OX(FLOWER_R + g), 0, 7); }
-      octx.fill(); octx.stroke();
-      octx.beginPath(); octx.rect(0, 0, 1024, 1024); octx.rect(OX(g), OY(144 - g), OX(144 - 2 * g), OX(144 - 2 * g)); octx.fill("evenodd");
-      octx.strokeStyle = "rgba(236,90,80,.5)"; octx.setLineDash([10, 8]); octx.strokeRect(OX(g), OY(144 - g), OX(144 - 2 * g), OX(144 - 2 * g)); octx.setLineDash([]);
+      octx.fillStyle = "rgba(244,162,58,.10)"; octx.fill(); octx.strokeStyle = "rgba(244,162,58,.9)"; octx.lineWidth = 3; octx.setLineDash([14, 10]); octx.stroke(); octx.setLineDash([]);
     }
     if ($("optTrace").checked && trace.length > 1) { octx.beginPath(); trace.forEach((p, k) => k ? octx.lineTo(OX(p.x), OY(p.y)) : octx.moveTo(OX(p.x), OY(p.y))); octx.strokeStyle = "rgba(79,209,139,.95)"; octx.lineWidth = 5; octx.lineJoin = octx.lineCap = "round"; octx.stroke(); }
     octx.fillStyle = "rgba(238,242,251,.85)"; octx.font = "700 19px Figtree, system-ui, sans-serif"; octx.textBaseline = "alphabetic";
@@ -427,7 +433,7 @@ details summary { cursor: pointer; font: 700 15px var(--disp); letter-spacing: .
   const P = (x, y, z = 0) => new THREE.Vector3(x * IN - F, y * IN - F, z);
   const HON = 0xf4c430, mHon = new THREE.MeshBasicMaterial({ color: HON }), mHonDim = new THREE.MeshBasicMaterial({ color: HON, transparent: true, opacity: 0.55 }),
     mWhite = new THREE.MeshBasicMaterial({ color: 0xeef2fb }), mFoot = new THREE.MeshBasicMaterial({ color: HON, transparent: true, opacity: 0.13, depthWrite: false, side: THREE.DoubleSide }),
-    mStart = new THREE.MeshBasicMaterial({ color: 0x4fd18b }), mBad = new THREE.MeshBasicMaterial({ color: 0xec5a50 }), mBadDim = new THREE.MeshBasicMaterial({ color: 0xec5a50, transparent: true, opacity: 0.6 }), mGhost = new THREE.LineBasicMaterial({ color: HON, transparent: true, opacity: 0.75 }), mDash = new THREE.LineDashedMaterial({ color: 0xeef2fb, dashSize: 0.04, gapSize: 0.03, transparent: true, opacity: 0.55 });
+    mStart = new THREE.MeshBasicMaterial({ color: 0x4fd18b }), mBad = new THREE.MeshBasicMaterial({ color: 0xec5a50 }), mBadDim = new THREE.MeshBasicMaterial({ color: 0xec5a50, transparent: true, opacity: 0.85 }), mGhost = new THREE.LineBasicMaterial({ color: HON, transparent: true, opacity: 0.75 }), mDash = new THREE.LineDashedMaterial({ color: 0xeef2fb, dashSize: 0.04, gapSize: 0.03, transparent: true, opacity: 0.55 });
   const cubeGeo = new THREE.BoxGeometry(0.05, 0.05, 0.05), puckGeo = new THREE.CylinderGeometry(0.045, 0.045, 0.012, 24), coneGeo = new THREE.ConeGeometry(0.03, 0.07, 14), shaftGeo = new THREE.CylinderGeometry(0.009, 0.009, 1, 8), ringGeo = new THREE.RingGeometry(0.05, 0.07, 32);
   puckGeo.rotateX(Math.PI / 2);
   const pathG = new THREE.Group(); scene.add(pathG);
@@ -468,7 +474,7 @@ details summary { cursor: pointer; font: 700 15px var(--disp); letter-spacing: .
       const samples = []; for (let k = 0; k <= 80; k++) { const p = bez(pts, k / 80); samples.push(P(p.x, p.y, 0.012)); }
       const blk = blockOf(i), lit = on || now;
       let len = 0; for (let k = 1; k < samples.length; k++) len += samples[k].distanceTo(samples[k - 1]);
-      if (len > 0.01) { const clean = samples.filter((p, k) => k === 0 || p.distanceTo(samples[k - 1]) > 1e-4); if (clean.length > 1) pathG.add(own(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(clean), 160, lit ? 0.014 : 0.009, 6, false), blk ? (lit ? mBad : mBadDim) : lit ? mHon : mHonDim))); }
+      if (len > 0.01) { const clean = samples.filter((p, k) => k === 0 || p.distanceTo(samples[k - 1]) > 1e-4); if (clean.length > 1) pathG.add(own(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(clean), 160, lit ? 0.014 : blk ? 0.013 : 0.009, 6, false), blk ? (lit ? mBad : mBadDim) : lit ? mHon : mHonDim))); }
       if (blk) sprite(blk.x, blk.y, label("!", false, false, true), 0.1);
       if (s.controls.length) { const l = own(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts.map(p => P(p.x, p.y, 0.02))), mDash)); l.computeLineDistances(); pathG.add(l); }
       const h = s.heading === "tangent" ? tangentEnd(auto, i) * D2R : s.h * D2R;
@@ -614,7 +620,7 @@ details summary { cursor: pointer; font: 700 15px var(--disp); letter-spacing: .
   function showDryWarnings() {   // in place, so a form you're typing in keeps its focus
     document.querySelectorAll("#steps .step").forEach(d => {
       const b = blockOf(+d.dataset.i), e = d.querySelector(".dryw"); if (!e) return;
-      e.hidden = !b; e.textContent = b ? `Test run: ${b.msg} Move the end point or add a curve point to steer around the red striped zones.` : "";
+      e.hidden = !b; e.textContent = b ? `Test run: ${b.msg} Move the end point, or add a curve point and steer around the dashed outline.` : "";
     });
   }
   function renderStartWarn() { const w = obstacleAt(auto.start.x, auto.start.y, auto.start.h * D2R, 0.3); const e = $("startWarn"); e.hidden = !w; e.textContent = w ? `The robot overlaps ${w} here. Move the start pose.` : ""; }
