@@ -1,0 +1,579 @@
+<title>BioBuzz Build Book</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;800;900&family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: a build-book spread. A rail of numbered steps on the left; the open page on the right with a big step tile, the 3D model, a parts callout and the step's checklist. */
+:root {
+  --page: #eef2f7;       /* table the book lies on: cool grey with a navy bias */
+  --sheet: #ffffff;      /* the book page */
+  --ink: #14203f;        /* navy text, from the robot's own colours */
+  --muted: #5b6782;
+  --line: #d6dce8;
+  --callout: #e4ebf5;    /* parts-needed box, build-book blue-grey */
+  --stage: #e8edf4;      /* 3D backdrop */
+  --tile-line: #b9c3d3;  /* field tile seams in the 3D view */
+  --honey: #e9a800;      /* accent: new parts, progress, the hive */
+  --honey-ink: #3d2a00;
+  --honey-soft: #fff1c2;
+  --good: #1d8a57;
+  --good-soft: #dff3e8;
+  --lock: #8a94a8;
+  --disp: "Archivo", "Arial Black", Arial, sans-serif;
+  --body: "Figtree", system-ui, -apple-system, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --page: #0a1122; --sheet: #121c35; --ink: #eef2fb; --muted: #a3b2d6; --line: #283a68;
+  --callout: #1a2a52; --stage: #0c152b; --tile-line: #2a3b66;
+  --honey: #f4c430; --honey-ink: #1d1500; --honey-soft: #3a300f;
+  --good: #4fd18b; --good-soft: #143426; --lock: #6c7898; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --page: #0a1122; --sheet: #121c35; --ink: #eef2fb; --muted: #a3b2d6; --line: #283a68;
+  --callout: #1a2a52; --stage: #0c152b; --tile-line: #2a3b66;
+  --honey: #f4c430; --honey-ink: #1d1500; --honey-soft: #3a300f;
+  --good: #4fd18b; --good-soft: #143426; --lock: #6c7898; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--page); color: var(--ink); font: 15px/1.5 var(--body); margin: 0;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 40px; }
+button { font: 600 14px var(--body); color: var(--ink); background: var(--sheet); border: 1.5px solid var(--line); border-radius: 8px; padding: 8px 14px; cursor: pointer; }
+button:hover:not(:disabled) { border-color: var(--ink); }
+button:disabled { cursor: not-allowed; opacity: .55; }
+button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid var(--honey); outline-offset: 2px; }
+button.primary { background: var(--ink); color: var(--sheet); border-color: var(--ink); }
+.wrap { max-width: 1200px; margin: 0 auto; display: grid; gap: 18px; }
+
+/* header */
+.top { display: flex; flex-wrap: wrap; align-items: end; gap: 12px 24px; }
+.brand { min-width: 0; flex: 1 1 320px; }
+.eyebrow { font: 600 12px var(--body); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+h1 { font: 900 clamp(30px, 5vw, 46px)/1 var(--disp); margin: 4px 0 0; letter-spacing: -.01em; text-wrap: balance; }
+h1 .hex { color: var(--honey); }
+.meter { flex: 0 1 340px; min-width: 220px; display: grid; gap: 6px; }
+.meter b { font: 800 22px var(--disp); font-variant-numeric: tabular-nums; }
+.meter small { color: var(--muted); font-size: 13px; }
+.bar { height: 10px; border-radius: 99px; background: var(--line); overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; background: var(--honey); transition: width .4s; }
+.notice { font-size: 13px; color: var(--muted); display: flex; gap: 8px; align-items: center; }
+.notice::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--lock); flex: none; }
+.notice.live::before { background: var(--good); }
+.notice.warn::before { background: var(--honey); }
+
+/* book */
+.book { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 18px; align-items: start; }
+.rail { background: var(--sheet); border: 1.5px solid var(--line); border-radius: 14px; padding: 10px; display: grid; gap: 4px; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); }
+.rail a { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 7px 8px; border-radius: 9px; color: inherit; text-decoration: none; }
+.rail a:hover { background: var(--callout); }
+.rail a[aria-current="step"] { background: var(--callout); box-shadow: inset 3px 0 0 var(--honey); }
+.rail .n { width: 34px; height: 34px; border-radius: 8px; display: grid; place-items: center; font: 900 16px var(--disp); background: var(--page); border: 1.5px solid var(--line); font-variant-numeric: tabular-nums; }
+.rail .t { font-weight: 600; font-size: 14px; line-height: 1.25; min-width: 0; }
+.rail .s { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.rail a.done .n { background: var(--good); color: var(--sheet); border-color: var(--good); }
+.rail a.locked { color: var(--lock); }
+.rail a.locked .n { border-style: dashed; }
+.rail .reset { margin-top: 8px; font-size: 12px; padding: 6px 10px; }
+
+.sheet { background: var(--sheet); border: 1.5px solid var(--line); border-radius: 16px; padding: clamp(16px, 3vw, 28px); display: grid; gap: 22px; min-width: 0; }
+.stephead { display: flex; gap: 18px; align-items: center; }
+.tile { flex: none; width: 84px; height: 84px; border-radius: 14px; background: var(--ink); color: var(--sheet); display: grid; place-items: center; font: 900 46px/1 var(--disp); font-variant-numeric: tabular-nums; }
+.tile.pre { font-size: 15px; letter-spacing: .08em; text-align: center; line-height: 1.1; padding: 6px; }
+.stephead h2 { font: 800 clamp(22px, 3.4vw, 30px)/1.1 var(--disp); margin: 0; text-wrap: balance; }
+.pill { display: inline-flex; align-items: center; gap: 6px; font: 700 12px var(--body); letter-spacing: .06em; text-transform: uppercase; padding: 3px 10px; border-radius: 99px; margin-top: 8px; background: var(--callout); color: var(--muted); }
+.pill.done { background: var(--good-soft); color: var(--good); }
+.pill.open { background: var(--honey-soft); color: var(--ink); }
+.lockbar { background: var(--callout); border-radius: 10px; padding: 10px 14px; font-weight: 600; }
+
+/* 3D stage */
+.stage { position: relative; border-radius: 14px; background: var(--stage); aspect-ratio: 16 / 10; max-width: 100%; overflow: hidden; }
+.stage canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+.stage canvas:active { cursor: grabbing; }
+.stage .msg { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-weight: 600; text-align: center; padding: 16px; }
+.stage .tools { position: absolute; right: 10px; top: 10px; display: flex; gap: 6px; flex-wrap: wrap; justify-content: end; }
+.stage .tools button { padding: 5px 10px; font-size: 12px; background: var(--sheet); }
+.stage .tools button[aria-pressed="true"] { background: var(--ink); color: var(--sheet); border-color: var(--ink); }
+.legend { position: absolute; left: 12px; bottom: 10px; display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; font-weight: 600; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 12px; height: 12px; border-radius: 3px; background: var(--honey); display: inline-block; }
+.legend i.old { background: var(--lock); }
+.note3d { font-size: 13px; color: var(--muted); margin-top: -12px; }
+
+/* content blocks */
+.cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+.callout { background: var(--callout); border-radius: 14px; padding: 14px 16px; display: grid; gap: 8px; min-width: 0; }
+.callout h3, .block h3 { font: 800 13px var(--disp); letter-spacing: .1em; text-transform: uppercase; margin: 0; color: var(--muted); }
+.part { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 10px; align-items: baseline; }
+.part .q { font: 900 20px var(--disp); font-variant-numeric: tabular-nums; }
+.block { display: grid; gap: 10px; min-width: 0; }
+ol.how { margin: 0; padding-left: 22px; display: grid; gap: 6px; }
+ol.how li::marker { font-weight: 800; color: var(--muted); }
+table.cfg { border-collapse: collapse; width: 100%; font-size: 14px; }
+table.cfg td { padding: 6px 8px 6px 0; border-top: 1px solid var(--line); vertical-align: top; }
+table.cfg td:first-child { font: 500 13px var(--mono); white-space: nowrap; color: var(--ink); }
+.cfgwrap { overflow-x: auto; }
+
+/* checklist */
+.checks { display: grid; gap: 8px; }
+.group-title { font: 700 13px var(--body); color: var(--muted); margin: 6px 0 0; }
+label.check { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 12px; align-items: start; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 10px; cursor: pointer; }
+label.check:hover { border-color: var(--muted); }
+label.check.on { background: var(--good-soft); border-color: transparent; }
+label.check.ro { cursor: default; }
+label.check input { appearance: none; -webkit-appearance: none; width: 24px; height: 24px; margin: 0; border: 2px solid var(--muted); border-radius: 6px; display: grid; place-items: center; background: var(--sheet); cursor: inherit; }
+label.check input:checked { background: var(--good); border-color: var(--good); }
+label.check input:checked::after { content: ""; width: 7px; height: 12px; border: solid var(--sheet); border-width: 0 3px 3px 0; transform: translateY(-1px) rotate(45deg); }
+label.check input:disabled { opacity: .5; }
+.check .txt { min-width: 0; }
+.check .who { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
+.who img { width: 16px; height: 16px; border-radius: 50%; vertical-align: -3px; margin-right: 4px; }
+
+.nav { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; border-top: 1.5px solid var(--line); padding-top: 16px; }
+.nav .hint { color: var(--muted); font-size: 13px; flex: 1 1 200px; text-align: center; }
+.finish { background: var(--honey-soft); border-radius: 14px; padding: 16px; font-weight: 600; }
+
+@media (max-width: 860px) {
+  .book { grid-template-columns: minmax(0, 1fr); }
+  .rail { position: static; grid-auto-flow: column; grid-auto-columns: max-content; overflow-x: auto; }
+  .rail a { grid-template-columns: 34px auto; }
+  .rail .s { display: none; }
+  .rail .reset { margin: 0; align-self: center; }
+  .cols { grid-template-columns: minmax(0, 1fr); }
+  .tile { width: 64px; height: 64px; font-size: 34px; }
+  .stage { aspect-ratio: 4 / 3; }
+}
+@media (prefers-reduced-motion: reduce) { .bar i { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="eyebrow">Team 31130 · Rose City League · 2026-27 BioBuzz</div>
+      <h1>BioBuzz <span class="hex">Build Book</span></h1>
+    </div>
+    <div class="meter" aria-live="polite">
+      <div><b id="mDone">0</b> <span>of <span id="mTotal">0</span> boxes checked</span></div>
+      <div class="bar"><i id="mBar"></i></div>
+      <div id="notice" class="notice">Connecting to the team checklist…</div>
+    </div>
+  </header>
+
+  <div class="book">
+    <nav class="rail" id="rail" aria-label="Build steps"></nav>
+    <main class="sheet" id="sheet">
+      <div id="head"></div>
+      <div class="stage" id="stage">
+        <div class="msg" id="stageMsg">Loading the robot model…</div>
+        <div class="tools" id="stageTools" hidden>
+          <button type="button" id="btnGhost" aria-pressed="false">Show finished robot</button>
+          <button type="button" id="btnZoomIn" aria-label="Zoom in">+</button>
+          <button type="button" id="btnZoomOut" aria-label="Zoom out">−</button>
+          <button type="button" id="btnView">Reset view</button>
+        </div>
+        <div class="legend" id="legend" hidden><span><i></i>New in this step</span><span><i class="old"></i>Built earlier</span><span>Drag to turn</span></div>
+      </div>
+      <div id="body"></div>
+    </main>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+"use strict";
+// ---------------------------------------------------------------- content
+// The parts come from the BioBuzz Test Drive sim (its CAD meshes and robot constants).
+const STEPS = [
+  { id: "before", title: "Before you build",
+    intro: "Gather every part and get the table ready. Step 1 unlocks when every box here is checked. Numbers come from the BioBuzz sim; check them against your own CAD.",
+    groups: [
+      { title: "Parts", items: [
+        ["p-drive", "4 HD Hex motors with UltraPlanetary gearboxes for the drive (the sim uses 5:1 + 4:1 = 18.9:1, about 1.2 m/s)"],
+        ["p-wheels", "4 mecanum wheels, 75 mm"],
+        ["p-frame", "Chassis channel, plates, spacers and screws for a 454 × 450 mm frame"],
+        ["p-hubs", "Control Hub and Expansion Hub (8 motors needs both hubs)"],
+        ["p-power", "12 V battery, power switch, and a charged spare battery"],
+        ["p-odo", "2 goBILDA odometry pods and the goBILDA Pinpoint"],
+        ["p-intake", "Intake: flap shaft, 4 flap sets, a continuous servo and a 2.5:1 belt"],
+        ["p-lift", "Lift: Core Hex motor, cord bands and two 16-tooth pulleys"],
+        ["p-booster", "Booster: Core Hex motor and a 40 mm roller"],
+        ["p-turret", "Turret: turntable bearing and the hex motor with its 3:1 gearbox"],
+        ["p-fly", "Flywheel: HD Hex with a 3:1 cartridge, 60T and 24T step-up, 90 mm wheel (steel disc plus 4 traction wheels)"],
+        ["p-hood", "Hood: hood plates and one servo"],
+        ["p-ll", "Limelight 3A and its USB cable"],
+        ["p-cables", "Cables: motor power, encoder cables for the turret and flywheel, servo extensions, an I2C cable for the Pinpoint"],
+      ]},
+      { title: "Table and team", items: [
+        ["q-print", "Every 3D-printed part printed (the white and navy parts in the sim)"],
+        ["q-tools", "Hex keys, wrenches, zip ties and a tape measure on the table"],
+        ["q-old", "Old robot taken apart and its parts sorted"],
+        ["q-sizing", "18 in sizing box or tape outline ready. The sim robot is 17.9 × 17.7 in, so it's a tight fit"],
+        ["q-names", "One person owns the Robot Configuration names and writes them down at each step"],
+      ]},
+    ],
+  },
+  { id: "step-1", title: "Chassis frame",
+    parts: [["1", "Channel frame"], ["2", "Side plates"], ["·", "Spacers and screws"]],
+    how: ["Build the outer rectangle: 454 mm wide and 450 mm front to back.",
+          "Square it. Both diagonals should measure the same.",
+          "Keep the middle open: the lift column and the turret motor sit near the center, just behind the intake."],
+    items: [["s1-square", "Diagonals match, so the frame is square"], ["s1-tight", "Every screw tight, no wobble"], ["s1-size", "Frame fits inside the 18 in sizing outline"]] },
+  { id: "step-2", title: "Drive: wheels and motors",
+    parts: [["4", "HD Hex motors with UltraPlanetary (5:1 + 4:1)"], ["4", "Mecanum wheels, 75 mm"]],
+    how: ["Mount a motor at each corner. In the sim the wheel centers are 336 mm apart side to side and 352 mm front to back.",
+          "Put each wheel on its own corner: seen from above, the rollers make an X.",
+          "Route every motor cable toward the electronics at the back."],
+    cfg: [["frontLeft", "Front left drive motor"], ["frontRight", "Front right drive motor"], ["backLeft", "Back left drive motor"], ["backRight", "Back right drive motor"]],
+    items: [["s2-x", "Rollers form an X when seen from above"], ["s2-spin", "Each wheel spins freely by hand"], ["s2-cables", "All 4 motor cables reach the back of the robot"]] },
+  { id: "step-3", title: "Electronics bay",
+    parts: [["1", "Control Hub"], ["1", "Expansion Hub"], ["1", "Battery and power switch"]],
+    how: ["Mount the hubs at the back. The sim's CAD puts the Control Hub at the back left.",
+          "Strap the battery down low so it can't slide.",
+          "Put the power switch where it can be reached from outside the robot.",
+          "Connect the Expansion Hub to the Control Hub with the RS485 cable."],
+    cfg: [["Control Hub", "Drive motors 0–3"], ["Expansion Hub 2", "Turret, flywheel, lift, booster; servos for the intake and hood"]],
+    items: [["s3-mount", "Both hubs mounted, every port still reachable"], ["s3-batt", "Battery strapped down"], ["s3-switch", "Power switch reachable from outside the robot"], ["s3-link", "Expansion Hub connected to the Control Hub"]] },
+  { id: "step-4", title: "Odometry pods", no3d: "The odometry pods aren't in the sim's 3D model, so where they go is up to you.",
+    parts: [["2", "goBILDA odometry pods"], ["1", "goBILDA Pinpoint"]],
+    how: ["Mount one pod facing forward (it measures forward and back) and one sideways (it measures strafing).",
+          "Both pods should spring down flat onto the tiles.",
+          "Mount the Pinpoint near the middle and plug it into an I2C port on the Control Hub.",
+          "Measure how far each pod is from the robot's center, in mm, and write it down. Pedro Pathing needs these numbers."],
+    cfg: [["pinpoint", "goBILDA Pinpoint Odometry Computer (I2C)"]],
+    items: [["s4-tiles", "Both pods press flat on the tiles"], ["s4-offsets", "Pod offsets measured and written down"], ["s4-i2c", "Pinpoint plugged into an I2C port"]] },
+  { id: "step-5", title: "Intake",
+    parts: [["1", "Flap shaft with 4 flap sets"], ["1", "Continuous servo and 2.5:1 belt"], ["2", "Funnel guides"]],
+    how: ["Mount the flap shaft across the front, about 178 mm ahead of the turret's center.",
+          "Drive it with the servo through the 2.5:1 belt.",
+          "Add the funnel guides so balls roll into the lift's mouth."],
+    cfg: [["intake", "Continuous Rotation Servo"]],
+    items: [["s5-sweep", "Flaps sweep balls toward the back"], ["s5-funnel", "Balls roll into the lift mouth without catching"], ["s5-dir", "Wrote down which servo direction pulls balls in"]] },
+  { id: "step-6", title: "Lift",
+    parts: [["1", "Core Hex motor"], ["2", "16-tooth pulleys (1:1)"], ["·", "Cord bands"]],
+    how: ["Build the center column that carries balls up to the turret.",
+          "Run the cord bands on the 16-tooth pulleys, driven 1:1 by the Core Hex.",
+          "The lift holds 2 POLLEN, one above the other."],
+    cfg: [["lift", "REV Core Hex Motor"]],
+    items: [["s6-tension", "Bands tight, no slipping on the pulleys"], ["s6-ball", "A POLLEN pushed by hand rides up the column"], ["s6-two", "Two POLLEN fit in the lift"]] },
+  { id: "step-7", title: "Deck and turntable",
+    parts: [["1", "Top deck plate"], ["1", "Turntable bearing"], ["1", "Center hub"]],
+    how: ["Mount the deck over the electronics.",
+          "Center the turntable over the lift column. In the sim the turret's center is 21 mm in front of the robot's center."],
+    items: [["s7-spin", "Turntable spins freely all the way around"], ["s7-center", "Turntable is centered over the lift column"]] },
+  { id: "step-8", title: "Turret drive",
+    parts: [["1", "Hex motor with 3:1 gearbox"], ["1", "Motor mount"]],
+    how: ["Mount the turret motor under the deck so it drives the turntable.",
+          "The turret turns from −220° to +127° (347° in all), so it can't spin all the way around. Leave cable slack for that range.",
+          "Mark the zero position, with the turret facing forward."],
+    cfg: [["turret", "Motor, encoder in the same port number"]],
+    items: [["s8-drive", "Motor turns the turret without slipping"], ["s8-enc", "Encoder cable in the same port number as the motor"], ["s8-zero", "Zero mark drawn with the turret facing forward"], ["s8-slack", "Cables have slack for the full turn range"]] },
+  { id: "step-9", title: "Turret body",
+    parts: [["1", "Turret drum"], ["2", "Side plates"], ["·", "Printed parts"]],
+    how: ["Build the turret drum and side plates on the turntable.",
+          "Line the ball path up with the lift column so balls pass straight up into the turret."],
+    items: [["s9-path", "Lift column lines up with the ball path into the turret"], ["s9-clear", "Turret clears everything over its full range"]] },
+  { id: "step-10", title: "Flywheel and booster",
+    parts: [["1", "HD Hex with 3:1 cartridge"], ["1", "60T and 24T step-up"], ["1", "90 mm flywheel"], ["1", "Booster: Core Hex and 40 mm roller"]],
+    how: ["Gear the flywheel 3:1 down, then 60T to 24T up. In the sim that tops out near 5100 RPM at the wheel.",
+          "The wheel is a 76 mm steel disc with 4 traction wheels; keep it balanced.",
+          "Mount the booster roller so it presses the top ball into the flywheel. It only runs while firing."],
+    cfg: [["flywheel", "REV HD Hex Motor, encoder in the same port number"], ["booster", "REV Core Hex Motor"]],
+    items: [["s10-true", "Flywheel spins true, no wobble or rubbing"], ["s10-belt", "Gears or belt tight"], ["s10-enc", "Flywheel encoder in the same port number as its motor"], ["s10-boost", "Booster roller touches the top ball"]] },
+  { id: "step-11", title: "Hood",
+    parts: [["1", "Hood plates"], ["1", "Servo"]],
+    how: ["Center the servo before you attach the horn.",
+          "The hood sets the shot angle from 25° to 65°."],
+    cfg: [["hood", "Servo"]],
+    items: [["s11-center", "Servo centered before the horn went on"], ["s11-range", "Hood moves from 25° to 65° without binding"]] },
+  { id: "step-12", title: "Limelight 3A",
+    parts: [["1", "Limelight 3A"], ["1", "USB cable"]],
+    how: ["Mount it on the turret, 176 mm ahead of the turret's center, tilted up 25°.",
+          "Leave a loop of USB cable for the turret's full range.",
+          "Open the Limelight's web page and check that it sees the HIVE AprilTags."],
+    cfg: [["limelight", "Limelight 3A (USB)"]],
+    items: [["s12-tilt", "Tilted up 25°"], ["s12-cable", "USB cable has slack for the full turret range"], ["s12-tags", "Sees the HIVE AprilTags in its web view"]] },
+  { id: "step-13", title: "Wire up and configure", no3d: "No new parts: this step is wiring, setup and checks.",
+    how: ["Enter every name from steps 2 to 12 in the Robot Configuration on the Driver Hub, and save it.",
+          "Tie down every wire, away from the wheels, flywheel and turret.",
+          "Fit the robot in the sizing box, and weigh it."],
+    items: [["s13-config", "Every name saved in the Robot Configuration"], ["s13-wires", "Wires tied down, nothing near the wheels, flywheel or turret"], ["s13-size", "Robot fits the 18 in sizing box"], ["s13-weigh", "Robot weighed (the sim guesses 10 kg)"], ["s13-claude", "Configuration names sent to Claude for the new TeleOp"]] },
+];
+STEPS.forEach((s, i) => { s.index = i; s.all = s.groups ? s.groups.flatMap(g => g.items) : s.items; });
+const ALL_IDS = STEPS.flatMap(s => s.all.map(it => it[0]));
+// Which build step adds each of the sim's 51 CAD meshes (sorted by colour and position).
+const MESH_STEP = [5,5,5,5,3,7,2,3,3,3,3,3,3,3,3,2,5,3,5,1,6,6,5,1,1,1,7,7,8,7,9,9,9,9,10,12,10,11,11,11,11,10,10,10,8,8,10,9,9,7,10];
+
+// ---------------------------------------------------------------- state
+const $ = id => document.getElementById(id);
+let checks = {};            // id -> {done, by, at}
+let mode = "loading";       // loading | db | local
+let canWrite = true, canEdit = false, myId = null, db = null, user = null;
+let current = 0;
+const writeChain = {};
+
+function isDone(id) { return !!(checks[id] && checks[id].done); }
+function stepComplete(i) { return STEPS[i].all.every(it => isDone(it[0])); }
+function unlocked(i) { for (let k = 0; k < i; k++) if (!stepComplete(k)) return false; return true; }
+function firstOpen() { for (let i = 0; i < STEPS.length; i++) if (!stepComplete(i)) return i; return STEPS.length - 1; }
+
+function loadLocal() { try { const raw = localStorage.getItem("biobuzz-build-checks"); if (raw) checks = JSON.parse(raw) || {}; } catch (e) {} }
+function saveLocal() { try { localStorage.setItem("biobuzz-build-checks", JSON.stringify(checks)); } catch (e) {} }
+
+function setNotice(text, kind) { const n = $("notice"); n.textContent = text; n.className = "notice" + (kind ? " " + kind : ""); }
+
+// ---------------------------------------------------------------- render
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function renderRail() {
+  $("rail").innerHTML = STEPS.map((s, i) => {
+    const done = s.all.filter(it => isDone(it[0])).length, total = s.all.length;
+    const cls = stepComplete(i) ? "done" : unlocked(i) ? "" : "locked";
+    const n = stepComplete(i) ? "✓" : i === 0 ? "☐" : String(i);
+    const state = stepComplete(i) ? "Done" : unlocked(i) ? `${done} of ${total}` : "Locked";
+    return `<a href="#${s.id}" class="${cls}" ${i === current ? 'aria-current="step"' : ""}><span class="n" aria-hidden="true">${n}</span><span class="t">${esc(s.title)}</span><span class="s">${state}</span></a>`;
+  }).join("") + (canEdit && mode === "db" ? `<button type="button" class="reset" id="btnReset">Clear all checks</button>` : "");
+  const r = $("btnReset"); if (r) r.onclick = onReset;
+}
+
+function itemRow(id, text, ro) {
+  const c = checks[id], on = isDone(id);
+  const who = on && c && c.by ? `<span class="who" data-by="${esc(c.by)}" data-at="${esc(c.at || "")}"></span>`
+    : on && c && c.at ? `<span class="who">${esc(ago(c.at))}</span>` : "";
+  return `<label class="check${on ? " on" : ""}${ro ? " ro" : ""}" for="c-${esc(id)}"><input type="checkbox" id="c-${esc(id)}" data-id="${esc(id)}" ${on ? "checked" : ""} ${ro ? "disabled" : ""}><span class="txt">${esc(text)}${who}</span></label>`;
+}
+
+function renderStep() {
+  const s = STEPS[current], i = current, open = unlocked(i), done = stepComplete(i), ro = !open || !canWrite || mode === "loading";
+  const total = s.all.length, n = s.all.filter(it => isDone(it[0])).length;
+  $("head").innerHTML = `<div class="stephead"><div class="tile${i === 0 ? " pre" : ""}" aria-hidden="true">${i === 0 ? "BEFORE<br>YOU<br>BUILD" : i}</div><div><div class="eyebrow">${i === 0 ? "Checklist" : `Step ${i} of ${STEPS.length - 1}`}</div><h2>${esc(s.title)}</h2><span class="pill ${done ? "done" : open ? "open" : ""}">${done ? "Done" : open ? `${n} of ${total} checked` : "Locked"}</span></div></div>`;
+  let html = "";
+  if (!open) html += `<div class="lockbar">Finish ${i - 1 === 0 ? "the Before you build checklist" : "step " + (i - 1)} first. You can look ahead, but these boxes unlock after that.</div>`;
+  if (s.no3d) html += `<p class="note3d">${esc(s.no3d)}</p>`;
+  if (i === 0) {
+    html += `<p style="margin:0;max-width:65ch">${esc(s.intro)}</p><div class="checks">` +
+      s.groups.map(g => `<div class="group-title">${esc(g.title)}</div>` + g.items.map(it => itemRow(it[0], it[1], ro)).join("")).join("") + `</div>`;
+  } else {
+    html += `<div class="cols">`;
+    if (s.parts) html += `<div class="callout"><h3>Parts for this step</h3>${s.parts.map(p => `<div class="part"><span class="q">${p[0] === "·" ? "·" : esc(p[0]) + "×"}</span><span>${esc(p[1])}</span></div>`).join("")}</div>`;
+    html += `<div class="block"><h3>How</h3><ol class="how">${s.how.map(h => `<li>${esc(h)}</li>`).join("")}</ol></div></div>`;
+    if (s.cfg) html += `<div class="block"><h3>Robot Configuration names</h3><div class="cfgwrap"><table class="cfg">${s.cfg.map(c => `<tr><td>${esc(c[0])}</td><td>${esc(c[1])}</td></tr>`).join("")}</table></div></div>`;
+    html += `<div class="block"><h3>Check before moving on</h3><div class="checks">${s.all.map(it => itemRow(it[0], it[1], ro)).join("")}</div></div>`;
+  }
+  const last = i === STEPS.length - 1;
+  if (last && done) html += `<div class="finish">Every box is checked. The robot is built. Send the configuration names to Claude and we'll write the new TeleOp.</div>`;
+  const nextLabel = i === 0 ? "Start building" : last ? "" : "Next step";
+  const hint = done ? (last ? "" : "Step complete.") : open ? `Check all ${total} boxes to unlock ${i === 0 ? "step 1" : last ? "the finish" : "step " + (i + 1)}.` : "";
+  html += `<div class="nav"><button type="button" id="btnPrev" ${i === 0 ? "disabled" : ""}>Back</button><span class="hint">${esc(hint)}</span>${nextLabel ? `<button type="button" class="primary" id="btnNext" ${done ? "" : "disabled"}>${nextLabel}</button>` : "<span></span>"}</div>`;
+  $("body").innerHTML = html;
+  $("btnPrev").onclick = () => go(i - 1);
+  const nx = $("btnNext"); if (nx) nx.onclick = () => go(i + 1);
+  $("body").querySelectorAll("input[data-id]").forEach(inp => inp.addEventListener("change", () => toggle(inp.dataset.id, inp.checked)));
+  fillWho();
+}
+
+function renderMeter() {
+  const done = ALL_IDS.filter(isDone).length;
+  $("mDone").textContent = done; $("mTotal").textContent = ALL_IDS.length;
+  $("mBar").style.width = (100 * done / ALL_IDS.length).toFixed(1) + "%";
+}
+
+function render() {
+  const focusId = document.activeElement && document.activeElement.id;
+  renderMeter(); renderRail(); renderStep(); viewer.setStep(current);
+  if (focusId) { const el = $(focusId); if (el) el.focus({ preventScroll: true }); }
+}
+
+function ago(iso) {
+  const t = Date.parse(iso); if (!t) return "";
+  const m = Math.round((Date.now() - t) / 60000);
+  if (m < 1) return "just now"; if (m < 60) return m + " min ago";
+  const h = Math.round(m / 60); if (h < 24) return h + " h ago";
+  return new Date(t).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+async function fillWho() {
+  const els = [...$("body").querySelectorAll(".who[data-by]")]; if (!els.length) return;
+  let ps = null;
+  if (user) { try { ps = await user.profiles([...new Set(els.map(e => e.dataset.by))]); } catch (e) {} }
+  for (const el of els) {
+    if (!el.isConnected) continue;
+    const p = ps && ps[el.dataset.by];
+    el.textContent = "";
+    if (p && p.avatarUrl) { const img = document.createElement("img"); img.src = p.avatarUrl; img.alt = ""; el.append(img); }
+    el.append(document.createTextNode(((p && p.name) || (el.dataset.by === myId ? "You" : "A teammate")) + (el.dataset.at ? " · " + ago(el.dataset.at) : "")));
+  }
+}
+
+// ---------------------------------------------------------------- navigation
+function go(i) { i = Math.max(0, Math.min(STEPS.length - 1, i)); location.hash = STEPS[i].id; }
+function fromHash() {
+  const h = location.hash.slice(1), i = STEPS.findIndex(s => s.id === h);
+  current = i >= 0 ? i : firstOpen();
+  render();
+  if (i >= 0) $("head").scrollIntoView({ block: "nearest" });
+}
+addEventListener("hashchange", fromHash);
+
+// ---------------------------------------------------------------- writes
+function toggle(id, val) {
+  if (!canWrite) { render(); return; }
+  checks = { ...checks, [id]: { done: val, by: myId, at: new Date().toISOString() } };
+  render();
+  if (mode === "local") { saveLocal(); return; }
+  if (mode !== "db") return;
+  const body = { done: val, by: myId, at: checks[id].at };
+  writeChain[id] = (writeChain[id] || Promise.resolve()).then(() => db.collection("checks").doc(id).set(body)).catch(e => {
+    if (e && (e.code === "invalid_argument" || e.code === "revoked")) { canWrite = false; setNotice("You can view this checklist but not change it. Ask the owner for Contributor access.", "warn"); }
+    else setNotice("A check didn't save. Try again in a moment.", "warn");
+  });
+}
+
+let resetArmed = false;
+async function onReset() {
+  const b = $("btnReset");
+  if (!resetArmed) { resetArmed = true; b.textContent = "Click again to clear every box"; setTimeout(() => { resetArmed = false; const r = $("btnReset"); if (r) r.textContent = "Clear all checks"; }, 4000); return; }
+  resetArmed = false; b.disabled = true; b.textContent = "Clearing…";
+  for (const id of Object.keys(checks)) { try { await db.collection("checks").doc(id).delete(); } catch (e) {} }
+}
+
+// ---------------------------------------------------------------- 3D viewer
+const viewer = (() => {
+  const stage = $("stage"), msg = $("stageMsg");
+  let renderer, scene, camera, meshes = [], step = 0, ghost = false, az = -2.15, el = 0.5, dist = 1250, idle = 0, grid, ready = false;
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const target = new THREE.Vector3(0, 0, 190);
+  const honey = new THREE.Color("#f4c430");
+
+  function cssColor(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || "#888"; }
+  function placeCamera() {
+    camera.position.set(target.x + dist * Math.cos(el) * Math.cos(az), target.y + dist * Math.cos(el) * Math.sin(az), target.z + dist * Math.sin(el));
+    camera.lookAt(target);
+  }
+  function resize() {
+    if (!renderer) return;
+    const w = stage.clientWidth, h = stage.clientHeight;
+    renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+  }
+  function retint() {
+    if (!grid) return;
+    const c = new THREE.Color(cssColor("--tile-line"));
+    grid.material.color = c; grid.material.needsUpdate = true;
+  }
+  function unpack(q) {
+    const bin = atob(q.d), u = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    const a = new Uint16Array(u.buffer), f = new Float32Array(a.length);
+    for (let i = 0; i < a.length; i++) f[i] = q.o[i % 3] + a[i] * q.s[i % 3];
+    const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.BufferAttribute(f, 3)); geo.computeVertexNormals(); return geo;
+  }
+  function apply() {
+    if (!ready) return;
+    meshes.forEach((m, i) => {
+      const st = MESH_STEP[i], mat = m.material;
+      const finished = step === 0 || step === STEPS.length - 1;
+      const built = finished || st <= step, isNew = !finished && st === step;
+      m.visible = built || ghost;
+      mat.transparent = !built; mat.opacity = built ? 1 : 0.13; mat.depthWrite = built;
+      // new parts: tint toward honey and glow; everything else keeps its CAD colour
+      mat.color.copy(m.userData.base); if (isNew) mat.color.lerp(honey, 0.55);
+      mat.emissive.copy(isNew ? honey : new THREE.Color(0)); mat.emissiveIntensity = isNew ? 0.45 : 0;
+      m.userData.isNew = isNew;
+      mat.needsUpdate = true;
+    });
+    const s = STEPS[step];
+    $("legend").hidden = step === 0 || step === STEPS.length - 1 || !!s.no3d;
+  }
+  function frame(t) {
+    requestAnimationFrame(frame);
+    if (!ready || document.hidden) return;
+    if (!reduced && ++idle > 180) { az += 0.0016; placeCamera(); }
+    const pulse = 0.32 + 0.22 * Math.sin(t / 380);
+    for (const m of meshes) if (m.userData.isNew) m.material.emissiveIntensity = reduced ? 0.45 : pulse;
+    renderer.render(scene, camera);
+  }
+  async function init() {
+    try {
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.outputEncoding = THREE.sRGBEncoding;
+      renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1));
+    } catch (e) { msg.textContent = "3D view isn't available in this browser. The steps and checklist still work."; return; }
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(30, 1.6, 10, 20000); camera.up.set(0, 0, 1);
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x445066, 0.85));
+    const sun = new THREE.DirectionalLight(0xffffff, 0.75); sun.position.set(-600, -900, 1400); scene.add(sun);
+    const fill = new THREE.DirectionalLight(0xffffff, 0.3); fill.position.set(800, 600, 500); scene.add(fill);
+    // two-by-two field tiles (24 in = 609.6 mm) under the robot
+    grid = new THREE.GridHelper(1219.2, 2); grid.rotation.x = Math.PI / 2; scene.add(grid); retint();
+    try {
+      const res = await fetch("robotData.json"); if (!res.ok) throw new Error(res.status);
+      const data = await res.json();
+      const origin = new THREE.Group(); origin.position.set(0, -21, 130); scene.add(origin);
+      const G = { chassis: new THREE.Group(), turret: new THREE.Group(), hood: new THREE.Group(), wheel: new THREE.Group(), roller: new THREE.Group() };
+      G.fixed = G.chassis; origin.add(G.chassis, G.turret, G.roller); G.turret.add(G.hood, G.wheel);
+      G.hood.position.set(data.ax[0], 0, data.ax[1]); G.wheel.position.copy(G.hood.position);
+      G.roller.position.set(0, data.rollerAxis[0], data.rollerAxis[1]);
+      G.turret.rotation.z = -Math.PI / 2;            // turret facing the front, as in the sim
+      G.hood.rotation.y = -(45 - 25) * Math.PI / 180; // hood at 45°
+      for (const q of data.meshes) {
+        const mat = new THREE.MeshStandardMaterial({ color: new THREE.Color(q.color), metalness: 0.2, roughness: 0.6, side: THREE.DoubleSide });
+        const m = new THREE.Mesh(unpack(q.m), mat); m.userData.base = mat.color.clone(); G[q.group].add(m); meshes.push(m);
+      }
+    } catch (e) { msg.textContent = "Couldn't load the robot model. The steps and checklist still work."; return; }
+    stage.insertBefore(renderer.domElement, stage.firstChild);
+    renderer.domElement.setAttribute("aria-label", "3D model of the robot. Drag to turn it.");
+    renderer.domElement.setAttribute("role", "img");
+    msg.hidden = true; $("stageTools").hidden = false;
+    ready = true; resize(); placeCamera(); apply();
+    new ResizeObserver(resize).observe(stage);
+    let drag = null;
+    const cv = renderer.domElement;
+    cv.addEventListener("pointerdown", e => { drag = { x: e.clientX, y: e.clientY }; cv.setPointerCapture(e.pointerId); idle = 0; });
+    cv.addEventListener("pointermove", e => { if (!drag) return; az -= (e.clientX - drag.x) * 0.008; el = Math.max(0.05, Math.min(1.35, el + (e.clientY - drag.y) * 0.006)); drag = { x: e.clientX, y: e.clientY }; idle = 0; placeCamera(); });
+    const end = () => { drag = null; idle = 0; };
+    cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end);
+    $("btnZoomIn").onclick = () => { dist = Math.max(500, dist * 0.82); idle = 0; placeCamera(); };
+    $("btnZoomOut").onclick = () => { dist = Math.min(2600, dist / 0.82); idle = 0; placeCamera(); };
+    $("btnView").onclick = () => { az = -2.15; el = 0.5; dist = 1250; idle = 0; placeCamera(); };
+    $("btnGhost").onclick = () => { ghost = !ghost; $("btnGhost").setAttribute("aria-pressed", String(ghost)); apply(); };
+    matchMedia("(prefers-color-scheme: dark)").addEventListener("change", retint);
+    new MutationObserver(retint).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    requestAnimationFrame(frame);
+  }
+  init();
+  return { setStep(s) { step = s; apply(); } };
+})();
+
+// ---------------------------------------------------------------- start
+fromHash();
+
+(async () => {
+  const c = window.claude;
+  if (!c || typeof c.use !== "function") { mode = "local"; loadLocal(); setNotice("Checks are saved in this browser only."); fromHash(); return; }
+  try { [db, user] = await Promise.all([c.use("db"), c.use("user")]); } catch (e) { db = null; }
+  if (!db) { mode = "local"; loadLocal(); setNotice("Checks are saved in this browser only. Open it in Claude to share them with the team."); fromHash(); return; }
+  if (user) {
+    try { myId = await user.id(); } catch (e) {}
+    try { canEdit = await user.canEdit(); } catch (e) {}
+    try { const w = await user.can("data.write"); if (w === false) canWrite = false; } catch (e) {}
+  }
+  mode = "db";
+  let gotLive = false;
+  const timer = setTimeout(() => { if (!gotLive) setNotice("Can't reach the team checklist right now. Checks may be out of date.", "warn"); }, 10000);
+  db.collection("checks").onSnapshot(snap => {
+    const next = {};
+    snap.docs.forEach(d => { if (d.exists) next[d.id] = d.data(); });
+    checks = next;
+    if (!snap.metadata.fromCache && !gotLive) {
+      gotLive = true; clearTimeout(timer);
+      setNotice(canWrite ? "Shared with your team. Checks save for everyone, live." : "You can view this checklist but not change it. Ask the owner for Contributor access.", canWrite ? "live" : "warn");
+    }
+    const fresh = location.hash.slice(1) === "";
+    if (fresh) current = firstOpen();
+    render();
+  }, e => {
+    clearTimeout(timer);
+    setNotice("The team checklist stopped updating. Reload the page to reconnect.", "warn");
+  });
+  render();
+})();
+</script>

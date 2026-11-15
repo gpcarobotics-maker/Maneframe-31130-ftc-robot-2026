@@ -1,0 +1,620 @@
+<title>BioBuzz Auto Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;700&family=IBM+Plex+Mono:wght@400;600&family=Figtree:wght@400;600;700&display=swap">
+<style>
+/* Layout: the sim's pit-side look. The field, drawn to scale in Pedro inches, fills the left; the auto's steps, playback and Java sit in a panel on the right. One deliberate dark look, like the Test Drive sim. */
+:root {
+  color-scheme: dark;
+  --bg: #0c1630; --panel: #13224a; --panel2: #1b2e60; --line: #2c4282; --fg: #eef2fb; --mute: #a3b2d6;
+  --honey: #f4c430; --red: #ec5a50; --blue: #5b93ff; --good: #4fd18b; --warn: #f4a23a;
+  --disp: "Saira Condensed", "Arial Narrow", Arial, sans-serif; --mono: "IBM Plex Mono", Menlo, Consolas, monospace; --body: "Figtree", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--fg); font: 14px/1.45 var(--body); margin: 0;
+  padding-left: max(14px, env(safe-area-inset-left, 0px)); padding-right: max(14px, env(safe-area-inset-right, 0px)); padding-block: 12px 28px; }
+button, select, input, textarea { font: 600 13px var(--body); color: var(--fg); background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; }
+input, select { min-width: 0; }
+input[type=number] { width: 100%; font-family: var(--mono); font-weight: 400; }
+button { cursor: pointer; }
+button:hover:not(:disabled) { border-color: var(--honey); }
+button:disabled { opacity: .5; cursor: not-allowed; }
+button.primary { background: var(--honey); color: #14203f; border-color: var(--honey); }
+button.ghost { background: transparent; }
+button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible, canvas:focus-visible { outline: 2px solid var(--honey); outline-offset: 1px; }
+h1 { font: 700 26px/1 var(--disp); letter-spacing: .02em; margin: 0; }
+h1 b { color: var(--honey); font-weight: 700; }
+h2 { font: 700 15px/1.2 var(--disp); letter-spacing: .08em; text-transform: uppercase; color: var(--honey); margin: 0; }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.mute { color: var(--mute); }
+
+.top { max-width: 1320px; margin: 0 auto 12px; display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+.top .sub { color: var(--mute); font-size: 13px; flex: 1 1 260px; min-width: 0; }
+.clock { font: 700 26px/1 var(--mono); font-variant-numeric: tabular-nums; }
+.clock small { display: block; font: 400 11px var(--mono); color: var(--mute); letter-spacing: .05em; }
+.runbar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+
+.app { max-width: 1320px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 14px; align-items: start; }
+.fieldwrap { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px; display: grid; gap: 8px; min-width: 0; }
+.fieldwrap canvas { width: 100%; aspect-ratio: 1; display: block; border-radius: 6px; touch-action: none; background: #6f7379; }
+.fieldbar { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 12.5px; color: var(--mute); }
+.fieldbar label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+.timeline { height: 8px; border-radius: 4px; background: var(--bg); position: relative; overflow: hidden; }
+.timeline i { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--honey); }
+.status { font-size: 13px; min-height: 1.4em; }
+.status.warn { color: var(--warn); }
+
+.side { display: grid; gap: 12px; min-width: 0; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: grid; gap: 10px; min-width: 0; }
+.row { display: grid; gap: 8px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.row2 { display: grid; gap: 8px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.f { display: grid; gap: 3px; font-size: 12px; color: var(--mute); min-width: 0; }
+.f > * { color: var(--fg); }
+
+.steps { display: grid; gap: 6px; }
+.step { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; display: grid; gap: 8px; background: var(--bg); }
+.step.sel { border-color: var(--honey); }
+.step.now { box-shadow: inset 3px 0 0 var(--good); }
+.step .hd { display: flex; gap: 8px; align-items: center; }
+.step .n { font: 700 16px var(--disp); width: 22px; color: var(--honey); font-variant-numeric: tabular-nums; }
+.step .ttl { flex: 1; font-weight: 700; min-width: 0; cursor: pointer; }
+.step .ttl small { font-weight: 400; color: var(--mute); }
+.step .hd button { padding: 2px 7px; font-size: 12px; }
+.step .warn { color: var(--warn); font-size: 12px; }
+.adds { display: flex; flex-wrap: wrap; gap: 6px; }
+.adds button { padding: 5px 9px; font-size: 12px; }
+
+dl.score { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; margin: 0; }
+dl.score dt { color: var(--mute); } dl.score dd { margin: 0; text-align: right; font-family: var(--mono); }
+dl.score .tot { color: var(--honey); font-weight: 700; }
+textarea.code { width: 100%; min-height: 260px; font: 400 12px/1.45 var(--mono); white-space: pre; resize: vertical; background: #08101f; }
+.lib { display: grid; gap: 6px; }
+.lib .it { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 6px; align-items: center; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; }
+.lib .it span { min-width: 0; overflow-wrap: anywhere; }
+.lib .it small { display: block; color: var(--mute); font-size: 11.5px; }
+.note { font-size: 12.5px; color: var(--mute); margin: 0; }
+details summary { cursor: pointer; font: 700 15px var(--disp); letter-spacing: .08em; text-transform: uppercase; color: var(--honey); }
+
+@media (max-width: 980px) { .app { grid-template-columns: minmax(0, 1fr); } }
+</style>
+
+<header class="top">
+  <div><h1>BioBuzz <b>Auto Lab</b></h1></div>
+  <div class="sub">Plan a Pedro Pathing auto, run it in the Test Drive physics, then copy the Java. Team 31130.</div>
+  <div class="clock"><span id="clock">0.0</span><small>of 30.0 s</small></div>
+  <div class="runbar">
+    <button class="primary" id="btnRun" type="button">Run auto</button>
+    <button id="btnPause" type="button" disabled>Pause</button>
+    <button id="btnReset" type="button">Reset</button>
+    <select id="speed" aria-label="Playback speed"><option value="1">1×</option><option value="2">2×</option><option value="4">4×</option></select>
+  </div>
+</header>
+
+<div class="app">
+  <section class="fieldwrap">
+    <canvas id="field" tabindex="0" aria-label="Field, top-down, in Pedro inches. Drag the points to change the paths. Double-click to add a path ending there."></canvas>
+    <div class="timeline"><i id="tl"></i></div>
+    <div class="status" id="status" aria-live="polite">Drag the dots to shape the paths. Double-click the field to add a path that ends there.</div>
+    <div class="fieldbar">
+      <label><input type="checkbox" id="optShoot"> Where you can shoot from</label>
+      <label><input type="checkbox" id="optTrace" checked> Last run's track</label>
+      <span id="cursor" class="mono"></span>
+    </div>
+  </section>
+
+  <aside class="side">
+    <div class="card">
+      <h2>Auto</h2>
+      <div class="row2">
+        <label class="f">Name<input id="aName" type="text" maxlength="40"></label>
+        <label class="f">Alliance<select id="aAlliance"><option value="red">Red</option><option value="blue">Blue</option></select></label>
+      </div>
+      <div class="f">Start pose (x in, y in, heading °)</div>
+      <div class="row">
+        <input id="sX" type="number" step="0.5" aria-label="Start x">
+        <input id="sY" type="number" step="0.5" aria-label="Start y">
+        <input id="sH" type="number" step="5" aria-label="Start heading">
+      </div>
+      <div class="adds"><button id="btnMirror" type="button">Mirror to the other alliance</button></div>
+    </div>
+
+    <div class="card">
+      <h2>Steps</h2>
+      <div class="steps" id="steps"></div>
+      <div class="adds" aria-label="Add a step">
+        <button type="button" data-add="path">+ Path</button>
+        <button type="button" data-add="shoot">+ Shoot</button>
+        <button type="button" data-add="intake">+ Intake</button>
+        <button type="button" data-add="flywheel">+ Flywheel</button>
+        <button type="button" data-add="wait">+ Wait</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Result</h2>
+      <dl class="score" id="score"></dl>
+      <p class="note">Sim score for your alliance only, counted as the Test Drive sim counts it. The real game's auto scoring may differ.</p>
+    </div>
+
+    <div class="card">
+      <h2>Pedro 3 Java</h2>
+      <p class="note">An OpMode for Pedro Pathing 3: <span class="mono">line</span>/<span class="mono">curve</span> paths, <span class="mono">follower.follow</span> and <span class="mono">isBusy</span>. The flywheel, intake and firing methods at the bottom are empty until the new robot is wired.</p>
+      <textarea class="code" id="code" readonly spellcheck="false" aria-label="Generated Java"></textarea>
+      <div class="adds"><button id="btnCopy" type="button">Copy Java</button></div>
+    </div>
+
+    <div class="card">
+      <h2>Saved autos</h2>
+      <div class="adds"><button id="btnSave" type="button" class="primary">Save this auto</button></div>
+      <div class="lib" id="lib"></div>
+      <p class="note" id="libNote">Loading…</p>
+      <details>
+        <summary>Copy or paste as text</summary>
+        <div style="display:grid;gap:6px;margin-top:6px">
+          <textarea id="json" style="min-height:90px;font:400 11.5px var(--mono)" spellcheck="false" aria-label="Auto as JSON"></textarea>
+          <div class="adds"><button id="btnJsonCopy" type="button">Copy</button><button id="btnJsonLoad" type="button">Load pasted text</button></div>
+        </div>
+      </details>
+    </div>
+
+    <details class="card">
+      <summary>Pedro coordinates</summary>
+      <p class="note">Inches. (0, 0) is the bottom-left corner: red alliance wall on the left, audience at the bottom, so the field runs to (144, 144). Heading 0° faces right (toward the blue wall) and turns counter-clockwise, as in Pedro 3. Set your robot's start pose with the same numbers and the paths line up.</p>
+      <p class="note">The physics, field, HIVEs, balls and auto aim are copied from the BioBuzz Test Drive sim, including its guesses. The follower here mimics Pedro's behaviour and is not Pedro itself, so tune on the real robot.</p>
+    </details>
+  </aside>
+</div>
+
+<script>
+/*__SIMCORE__*/
+</script>
+<script>
+/*__AUTORUN__*/
+</script>
+<script>
+"use strict";
+(function () {
+  const { Sim, FIELD, KIND, R } = SimCore;
+  const { AutoRunner, placeRobot, toPedro, bez, tangentEnd, wrap, IN, F, D2R } = AutoRun;
+  const $ = id => document.getElementById(id);
+  const AUTO_LEN = 30;
+
+  // ---------------------------------------------------------------- the auto being edited
+  const SAMPLE = { name: "Red shoot and park", alliance: "red", start: { x: 9, y: 82, h: 0 }, steps: [
+    { type: "flywheel", on: true },
+    { type: "intake", on: true },
+    { type: "path", x: 20, y: 36, h: 0, heading: "linear", controls: [{ x: 36, y: 64 }], maxPower: 0.9 },
+    { type: "shoot", seconds: 4 },
+    { type: "path", x: 18, y: 100, h: 90, heading: "linear", controls: [], maxPower: 1 },
+  ] };
+  let auto = load() || clone(SAMPLE);
+  let sel = auto.steps.findIndex(s => s.type === "path");
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+  function load() { try { const t = localStorage.getItem("autolab-draft"); return t ? sanitize(JSON.parse(t)) : null; } catch (e) { return null; } }
+  function saveDraft() { try { localStorage.setItem("autolab-draft", JSON.stringify(auto)); } catch (e) {} }
+  const num = (v, d, lo = -1e9, hi = 1e9) => { v = Number(v); return Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d; };
+  function sanitize(a) {
+    if (!a || typeof a !== "object" || !Array.isArray(a.steps) || !a.start) return null;
+    const pt = (p, d) => ({ x: num(p && p.x, d.x, 0, 144), y: num(p && p.y, d.y, 0, 144) });
+    const out = { name: String(a.name || "Auto").slice(0, 40), alliance: a.alliance === "blue" ? "blue" : "red",
+      start: { ...pt(a.start, { x: 9, y: 82 }), h: num(a.start.h, 0, -360, 360) }, steps: [] };
+    for (const s of a.steps.slice(0, 40)) {
+      if (!s || typeof s !== "object") continue;
+      if (s.type === "path") out.steps.push({ type: "path", ...pt(s, { x: 72, y: 72 }), h: num(s.h, 0, -360, 360), heading: ["linear", "constant", "tangent"].includes(s.heading) ? s.heading : "linear",
+        controls: Array.isArray(s.controls) ? s.controls.slice(0, 4).map(c => pt(c, { x: 72, y: 72 })) : [], maxPower: num(s.maxPower, 1, 0.2, 1) });
+      else if (s.type === "shoot" || s.type === "wait") out.steps.push({ type: s.type, seconds: num(s.seconds, 2, 0.1, 30) });
+      else if (s.type === "intake" || s.type === "flywheel") out.steps.push({ type: s.type, on: !!s.on });
+    }
+    return out;
+  }
+
+  // ---------------------------------------------------------------- simulation
+  let sim, runner, running = false, paused = false, simT = 0, trace = [], acc = 0, finalScore = null;
+  function resetSim() {
+    sim = new Sim(); sim.reset(auto.alliance); placeRobot(sim, auto.start);
+    runner = null; running = false; paused = false; simT = 0; acc = 0; trace = []; finalScore = null;
+    shootMap = null; updateRunUI(); renderScore(); renderSteps();
+  }
+  function run() {
+    resetSim(); runner = new AutoRunner(sim, auto); running = true; trace = [];
+    setStatus("Running…"); updateRunUI();
+  }
+  function tick(dtReal) {
+    if (!running || paused) return;
+    acc += dtReal * Number($("speed").value);
+    while (acc >= 1 / 60 && running) {
+      acc -= 1 / 60;
+      const inp = runner.update(1 / 60); sim.step(1 / 60, inp); simT += 1 / 60;
+      if (runner.done && runner.doneAt == null) runner.doneAt = simT;
+      if (trace.length === 0 || simT - trace[trace.length - 1].t > 0.05) { const p = toPedro(sim.rob.x, sim.rob.y, sim.rob.th); trace.push({ t: simT, x: p.x, y: p.y }); }
+      if (simT >= AUTO_LEN) { finish(); break; }
+    }
+    if (running && runner) { renderStepsLight(); }
+  }
+  function finish() {
+    running = false; finalScore = sim.score(); updateRunUI(); renderScore(); renderStepsLight();
+    const msgs = runner.log.map(l => l.msg);
+    if (!runner.done) msgs.unshift(`Time ran out during step ${runner.i + 1}.`);
+    setStatus(msgs.length ? msgs.join(" ") : `Auto finished at ${runnerEndTime().toFixed(1)} s.`, msgs.length ? "warn" : "");
+  }
+  function runnerEndTime() { return runner && runner.doneAt != null ? runner.doneAt : simT; }
+
+  // where can this alliance shoot from? the sim's own aim solver on a 4 in grid
+  let shootMap = null;
+  function buildShootMap() {
+    const s = new Sim(); s.reset(auto.alliance); const out = [];
+    for (let px = 4; px <= 140; px += 4) for (let py = 4; py <= 140; py += 4) {
+      s.rob.x = px * IN - F; s.rob.y = py * IN - F; s.rob.vx = s.rob.vy = s.rob.w = 0; s.sense = null; s.mv = null; s.solved = null; s.solveAt = 0;
+      s.senseStep(0); const r = s.solveAim("pollen"); if (r && r.sol && r.sol.ok && !r.wrongSide) out.push([px, py]);
+    }
+    return out;
+  }
+  function canShootAt(x, y) {
+    const s = new Sim(); s.reset(auto.alliance);
+    s.rob.x = x * IN - F; s.rob.y = y * IN - F; s.sense = null; s.senseStep(0);
+    const r = s.solveAim("pollen"); return !!(r && r.sol && r.sol.ok && !r.wrongSide);
+  }
+
+  // ---------------------------------------------------------------- drawing
+  const cv = $("field"), ctx = cv.getContext("2d");
+  let W = 600, scale = 600 / 144, handles = [];
+  const X = px => px * scale, Y = py => W - py * scale;          // Pedro inches -> canvas px
+  const WX = x => X((x + F) / IN), WY = y => Y((y + F) / IN);      // sim metres -> canvas px
+  function fit() {
+    const r = cv.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1);
+    W = r.width; scale = W / 144; cv.width = Math.round(W * dpr); cv.height = Math.round(W * dpr); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  new ResizeObserver(() => { fit(); }).observe(cv); fit();
+
+  function rectW(r, fill, stroke) { const x0 = WX(r[0]), x1 = WX(r[1]), y0 = WY(r[3]), y1 = WY(r[2]); if (fill) { ctx.fillStyle = fill; ctx.fillRect(x0, y0, x1 - x0, y1 - y0); } if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 2; ctx.strokeRect(x0 + 1, y0 + 1, x1 - x0 - 2, y1 - y0 - 2); } }
+  function drawField() {
+    // tiles
+    for (let i = 0; i < 6; i++) for (let j = 0; j < 6; j++) { const k = (i + j) % 2 ? 0 : 6; ctx.fillStyle = `rgb(${108 + k},${112 + k},${118 + k})`; ctx.fillRect(X(i * 24), Y((j + 1) * 24), 24 * scale, 24 * scale); }
+    ctx.strokeStyle = "rgba(40,44,52,.55)"; ctx.lineWidth = 1; ctx.setLineDash([6, 4]);
+    for (let i = 1; i < 6; i++) { ctx.beginPath(); ctx.moveTo(X(i * 24), 0); ctx.lineTo(X(i * 24), W); ctx.moveTo(0, Y(i * 24)); ctx.lineTo(W, Y(i * 24)); ctx.stroke(); }
+    ctx.setLineDash([]);
+    rectW(FIELD.loading.red, "rgba(224,53,43,.25)", "#e0352b"); rectW(FIELD.loading.blue, "rgba(45,108,240,.25)", "#2d6cf0");
+    rectW(FIELD.garden.red, "#e0352b"); rectW(FIELD.garden.blue, "#2d6cf0");
+    // alliance walls
+    ctx.fillStyle = "#c9302a"; ctx.fillRect(0, 0, 4, W); ctx.fillStyle = "#2a5cc9"; ctx.fillRect(W - 4, 0, 4, W);
+    // HIVE frame bars
+    ctx.strokeStyle = "#b9bfc7"; ctx.lineWidth = 3;
+    for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(WX(s * FIELD.frameX), WY(-FIELD.frameY)); ctx.lineTo(WX(s * FIELD.frameX), WY(FIELD.frameY)); ctx.stroke(); }
+    ctx.beginPath(); ctx.moveTo(WX(-FIELD.frameX), WY(0)); ctx.lineTo(WX(FIELD.frameX), WY(0)); ctx.stroke();
+    // HIVE cells (top-down), the up CELL brighter
+    for (const hv of sim.hives) {
+      const up = hv.phi > 0 ? 1 : -1, col = hv.team === "red" ? "224,53,43" : "45,108,240";
+      for (const side of [-1, 1]) {
+        const a = side * FIELD.ub * Math.cos(hv.phi), b = side * FIELD.uo * Math.cos(hv.phi);
+        const x0 = WX(hv.x - FIELD.hw), x1 = WX(hv.x + FIELD.hw), y0 = WY(Math.max(a, b)), y1 = WY(Math.min(a, b));
+        ctx.fillStyle = `rgba(${col},${side === up ? 0.55 : 0.18})`; ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+        ctx.strokeStyle = `rgba(${col},.9)`; ctx.lineWidth = 1.5; ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
+      }
+    }
+    // FLOWERS
+    for (const [fx, fy] of FIELD.flowers) { ctx.beginPath(); ctx.arc(WX(fx), WY(fy), 0.062 / IN * scale, 0, 7); ctx.fillStyle = "rgba(213,154,58,.35)"; ctx.fill(); ctx.strokeStyle = "#d59a3a"; ctx.lineWidth = 2; ctx.stroke(); }
+    // axis labels in Pedro inches
+    ctx.fillStyle = "rgba(238,242,251,.75)"; ctx.font = `600 ${Math.max(9, W / 60)}px ${getComputedStyle(document.body).fontFamily}`;
+    for (let i = 0; i <= 144; i += 24) { ctx.fillText(String(i), X(i) + 3, W - 4); if (i) ctx.fillText(String(i), 6, Y(i) + 12); }
+  }
+  function drawShootMap() {
+    if (!$("optShoot").checked) return;
+    if (!shootMap) shootMap = buildShootMap();
+    ctx.fillStyle = "rgba(79,209,139,.28)";
+    for (const [x, y] of shootMap) ctx.fillRect(X(x - 2), Y(y + 2), 4 * scale, 4 * scale);
+  }
+  function drawBalls() {
+    for (const b of sim.balls) {
+      if (b.state === "out") continue;
+      ctx.beginPath(); ctx.arc(WX(b.x), WY(b.y), Math.max(2.5, b.r / IN * scale), 0, 7);
+      ctx.fillStyle = b.kind === "pollen" ? "#f6d21f" : b.team === "blue" ? "#2a64e0" : "#de3128";
+      ctx.globalAlpha = b.state === "held" ? 0.8 : 1; ctx.fill(); ctx.globalAlpha = 1;
+      ctx.strokeStyle = "rgba(0,0,0,.45)"; ctx.lineWidth = 1; ctx.stroke();
+    }
+  }
+  function drawRobotAt(px, py, h, ghost, turret) {
+    const c = Math.cos(h), s = Math.sin(h), hx = R.halfX / IN, fr = R.front / IN;   // robot: 454 x 450 mm
+    const corner = (f, r) => [X(px + f * c + r * s), Y(py + f * s - r * c)];
+    ctx.beginPath(); [[fr, -hx], [fr, hx], [-fr, hx], [-fr, -hx]].forEach((p, i) => { const q = corner(p[0], p[1]); i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); }); ctx.closePath();
+    ctx.fillStyle = ghost ? "rgba(22,49,110,.25)" : "rgba(22,49,110,.85)"; ctx.fill();
+    ctx.strokeStyle = ghost ? "rgba(244,196,48,.6)" : "#eef2fb"; ctx.lineWidth = ghost ? 1.5 : 2; ctx.setLineDash(ghost ? [5, 4] : []); ctx.stroke(); ctx.setLineDash([]);
+    // front edge (intake)
+    const a = corner(fr, -hx), b = corner(fr, hx); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.strokeStyle = "#f4c430"; ctx.lineWidth = 4; ctx.stroke();
+    if (turret != null) { const o = [X(px + 0.83 * c), Y(py + 0.83 * s)], L = 11; ctx.beginPath(); ctx.moveTo(o[0], o[1]); ctx.lineTo(o[0] + L * scale * Math.cos(turret), o[1] - L * scale * Math.sin(turret)); ctx.strokeStyle = "#4fd18b"; ctx.lineWidth = 3; ctx.stroke(); }
+  }
+  function lastPoseOf(i) { for (let k = i - 1; k >= 0; k--) { const s = auto.steps[k]; if (s.type === "path") return { x: s.x, y: s.y, h: s.heading === "tangent" ? tangentEnd(auto, k) : s.h }; } return auto.start; }
+  function drawPaths() {
+    handles = [];
+    const st = auto.start; drawRobotAt(st.x, st.y, st.h * D2R, true);
+    handles.push({ kind: "start", x: st.x, y: st.y });
+    auto.steps.forEach((s, i) => {
+      if (s.type !== "path") return;
+      const a = lastPoseOf(i), pts = [{ x: a.x, y: a.y }, ...s.controls, { x: s.x, y: s.y }], on = i === sel;
+      if (s.controls.length) { ctx.beginPath(); pts.forEach((p, k) => k ? ctx.lineTo(X(p.x), Y(p.y)) : ctx.moveTo(X(p.x), Y(p.y))); ctx.strokeStyle = "rgba(238,242,251,.35)"; ctx.lineWidth = 1; ctx.setLineDash([4, 4]); ctx.stroke(); ctx.setLineDash([]); }
+      ctx.beginPath(); for (let k = 0; k <= 60; k++) { const p = bez(pts, k / 60); k ? ctx.lineTo(X(p.x), Y(p.y)) : ctx.moveTo(X(p.x), Y(p.y)); }
+      ctx.strokeStyle = on ? "#f4c430" : "rgba(244,196,48,.6)"; ctx.lineWidth = on ? 3.5 : 2.5; ctx.stroke();
+      // end pose arrow
+      const h = s.heading === "tangent" ? tangentEnd(auto, i) * D2R : s.h * D2R, ex = X(s.x), ey = Y(s.y);
+      ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(ex + 16 * Math.cos(h), ey - 16 * Math.sin(h)); ctx.strokeStyle = "#eef2fb"; ctx.lineWidth = 2; ctx.stroke();
+      ctx.beginPath(); ctx.arc(ex, ey, on ? 7 : 6, 0, 7); ctx.fillStyle = on ? "#f4c430" : "#13224a"; ctx.fill(); ctx.strokeStyle = "#f4c430"; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = on ? "#14203f" : "#f4c430"; ctx.font = `700 10px ${getComputedStyle(document.body).fontFamily}`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(String(i + 1), ex, ey + 0.5); ctx.textAlign = "start"; ctx.textBaseline = "alphabetic";
+      handles.push({ kind: "end", i, x: s.x, y: s.y });
+      s.controls.forEach((c, ci) => { ctx.fillStyle = on ? "#f4c430" : "rgba(244,196,48,.55)"; ctx.fillRect(X(c.x) - 4.5, Y(c.y) - 4.5, 9, 9); handles.push({ kind: "ctrl", i, ci, x: c.x, y: c.y }); });
+    });
+  }
+  function drawTrace() {
+    if (!$("optTrace").checked || trace.length < 2) return;
+    ctx.beginPath(); trace.forEach((p, k) => k ? ctx.lineTo(X(p.x), Y(p.y)) : ctx.moveTo(X(p.x), Y(p.y)));
+    ctx.strokeStyle = "rgba(79,209,139,.9)"; ctx.lineWidth = 2; ctx.stroke();
+  }
+  function draw() {
+    ctx.clearRect(0, 0, W, W);
+    drawField(); drawShootMap(); drawPaths(); drawTrace(); drawBalls();
+    const p = toPedro(sim.rob.x, sim.rob.y, sim.rob.th);
+    drawRobotAt(p.x, p.y, p.h, false, sim.yaw + sim.rob.th);
+    $("clock").textContent = simT.toFixed(1); $("tl").style.width = (100 * Math.min(1, simT / AUTO_LEN)) + "%";
+  }
+
+  // ---------------------------------------------------------------- field editing
+  let drag = null;
+  const toIn = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) / scale, y: (r.height - (e.clientY - r.top)) / scale }; };
+  const snap = v => Math.round(Math.min(144, Math.max(0, v)) * 2) / 2;
+  cv.addEventListener("pointerdown", e => {
+    const p = toIn(e); let best = null, bd = 14 / scale;
+    for (const h of handles) { const d = Math.hypot(h.x - p.x, h.y - p.y); if (d < bd) { bd = d; best = h; } }
+    if (!best) return;
+    if (running) resetSim();
+    drag = best; if (best.i != null) { sel = best.i; renderSteps(); }
+    cv.setPointerCapture(e.pointerId); e.preventDefault();
+  });
+  cv.addEventListener("pointermove", e => {
+    const p = toIn(e); $("cursor").textContent = `x ${snap(p.x).toFixed(1)}  y ${snap(p.y).toFixed(1)}`;
+    if (!drag) return;
+    const x = snap(p.x), y = snap(p.y);
+    if (drag.kind === "start") { auto.start.x = x; auto.start.y = y; placeRobot(sim, auto.start); }
+    else if (drag.kind === "end") { auto.steps[drag.i].x = x; auto.steps[drag.i].y = y; }
+    else auto.steps[drag.i].controls[drag.ci] = { x, y };
+    syncForm(); renderStepsLight();
+  });
+  const endDrag = () => { if (drag) { drag = null; changed(); } };
+  cv.addEventListener("pointerup", endDrag); cv.addEventListener("pointercancel", endDrag);
+  cv.addEventListener("pointerleave", () => { if (!drag) $("cursor").textContent = ""; });
+  cv.addEventListener("dblclick", e => {
+    const p = toIn(e), a = lastPoseOf(auto.steps.length);
+    auto.steps.push({ type: "path", x: snap(p.x), y: snap(p.y), h: a.h, heading: "linear", controls: [], maxPower: 1 });
+    sel = auto.steps.length - 1; changed();
+  });
+
+  // ---------------------------------------------------------------- panel
+  const STEP_NAMES = { path: "Path", shoot: "Shoot", intake: "Intake", flywheel: "Flywheel", wait: "Wait" };
+  function stepSummary(s) {
+    if (s.type === "path") return `to (${s.x}, ${s.y}) · ${s.heading}${s.heading === "tangent" ? "" : " " + s.h + "°"}${s.controls.length ? " · curve" : ""}`;
+    if (s.type === "shoot" || s.type === "wait") return `${s.seconds} s`;
+    return s.on ? "on" : "off";
+  }
+  function stepWarning(i) {
+    const s = auto.steps[i];
+    if (s.type === "shoot") { const p = lastPoseOf(i); if (!canShootAt(p.x, p.y)) return "The sim can't shoot from here: too close, or on the wrong side of the HIVE."; }
+    return "";
+  }
+  function renderSteps() {
+    const box = $("steps"); box.innerHTML = "";
+    auto.steps.forEach((s, i) => {
+      const d = document.createElement("div"); d.className = "step" + (i === sel ? " sel" : ""); d.dataset.i = i;
+      d.innerHTML = `<div class="hd"><span class="n">${i + 1}</span><span class="ttl" role="button" tabindex="0">${STEP_NAMES[s.type]} <small></small></span>
+        <button type="button" data-act="up" aria-label="Move step ${i + 1} up">↑</button><button type="button" data-act="down" aria-label="Move step ${i + 1} down">↓</button><button type="button" data-act="del" aria-label="Delete step ${i + 1}">✕</button></div>`;
+      d.querySelector("small").textContent = stepSummary(s);
+      if (i === sel) d.append(stepForm(s, i));
+      const w = stepWarning(i); if (w) { const e = document.createElement("div"); e.className = "warn"; e.textContent = w; d.append(e); }
+      box.append(d);
+    });
+    renderStepsLight();
+  }
+  function renderStepsLight() {   // keep the summary and the running highlight current without rebuilding forms
+    document.querySelectorAll("#steps .step").forEach(d => {
+      const i = +d.dataset.i, s = auto.steps[i]; if (!s) return;
+      d.querySelector("small").textContent = stepSummary(s);
+      d.classList.toggle("now", !!(running && runner && runner.i === i));
+    });
+  }
+  function field(label, html) { return `<label class="f">${label}${html}</label>`; }
+  function stepForm(s, i) {
+    const f = document.createElement("div"); f.className = "frm"; f.style.display = "grid"; f.style.gap = "8px";
+    if (s.type === "path") {
+      f.innerHTML = `<div class="row">${field("x (in)", `<input type="number" step="0.5" data-k="x" value="${s.x}">`)}${field("y (in)", `<input type="number" step="0.5" data-k="y" value="${s.y}">`)}${field("heading °", `<input type="number" step="5" data-k="h" value="${s.h}" ${s.heading === "tangent" ? "disabled" : ""}>`)}</div>
+        <div class="row2">${field("Heading", `<select data-k="heading"><option value="linear">Linear (turn along the way)</option><option value="constant">Constant (hold the end heading)</option><option value="tangent">Tangent (face along the path)</option></select>`)}${field("Max power", `<input type="number" step="0.05" min="0.2" max="1" data-k="maxPower" value="${s.maxPower}">`)}</div>
+        <div class="adds"><button type="button" data-act="addc">+ Curve point</button>${s.controls.length ? `<button type="button" data-act="delc">− Curve point</button>` : ""}<span class="note">${s.controls.length ? s.controls.length + " curve point" + (s.controls.length > 1 ? "s" : "") + ": drag the squares" : "Straight line"}</span></div>`;
+      f.querySelector("select").value = s.heading;
+    } else if (s.type === "shoot" || s.type === "wait") {
+      f.innerHTML = `<div class="row2">${field(s.type === "shoot" ? "Fire for (s)" : "Wait (s)", `<input type="number" step="0.5" min="0.1" max="30" data-k="seconds" value="${s.seconds}">`)}<p class="note">${s.type === "shoot" ? "Turns the flywheel on and holds fire. Auto aim sets the turret, hood and RPM, as in the Test Drive sim." : ""}</p></div>`;
+    } else {
+      f.innerHTML = `<div class="row2">${field(STEP_NAMES[s.type], `<select data-k="on"><option value="1">On</option><option value="0">Off</option></select>`)}</div>`;
+      f.querySelector("select").value = s.on ? "1" : "0";
+    }
+    f.addEventListener("change", e => {
+      const k = e.target.dataset.k; if (!k) return;
+      if (k === "heading") s.heading = e.target.value;
+      else if (k === "on") s.on = e.target.value === "1";
+      else if (k === "seconds") s.seconds = num(e.target.value, s.seconds, 0.1, 30);
+      else if (k === "maxPower") s.maxPower = num(e.target.value, s.maxPower, 0.2, 1);
+      else s[k] = num(e.target.value, s[k], k === "h" ? -360 : 0, k === "h" ? 360 : 144);
+      changed();
+    });
+    return f;
+  }
+  $("steps").addEventListener("click", e => {
+    const d = e.target.closest(".step"); if (!d) return; const i = +d.dataset.i, act = e.target.dataset.act;
+    if (act === "up" && i > 0) { [auto.steps[i - 1], auto.steps[i]] = [auto.steps[i], auto.steps[i - 1]]; sel = i - 1; changed(); }
+    else if (act === "down" && i < auto.steps.length - 1) { [auto.steps[i + 1], auto.steps[i]] = [auto.steps[i], auto.steps[i + 1]]; sel = i + 1; changed(); }
+    else if (act === "del") { auto.steps.splice(i, 1); sel = Math.min(sel, auto.steps.length - 1); changed(); }
+    else if (act === "addc") { const s = auto.steps[i], a = lastPoseOf(i), k = s.controls.length + 1, n = k + 1; s.controls.push({ x: snap(a.x + (s.x - a.x) * k / n + 6), y: snap(a.y + (s.y - a.y) * k / n + 6) }); changed(); }
+    else if (act === "delc") { auto.steps[i].controls.pop(); changed(); }
+    else if (e.target.closest(".ttl")) { sel = sel === i ? -1 : i; renderSteps(); }
+  });
+  $("steps").addEventListener("keydown", e => { if ((e.key === "Enter" || e.key === " ") && e.target.classList.contains("ttl")) { e.preventDefault(); e.target.click(); } });
+  document.querySelectorAll("[data-add]").forEach(b => b.addEventListener("click", () => {
+    const t = b.dataset.add, a = lastPoseOf(auto.steps.length);
+    const s = t === "path" ? { type: "path", x: snap(a.x + 24), y: snap(a.y), h: a.h, heading: "linear", controls: [], maxPower: 1 }
+      : t === "shoot" ? { type: "shoot", seconds: 3 } : t === "wait" ? { type: "wait", seconds: 1 } : { type: t, on: true };
+    auto.steps.push(s); sel = auto.steps.length - 1; changed();
+  }));
+
+  function syncForm() {
+    $("aName").value = auto.name; $("aAlliance").value = auto.alliance;
+    $("sX").value = auto.start.x; $("sY").value = auto.start.y; $("sH").value = auto.start.h;
+    const s = auto.steps[sel], frm = document.querySelector(".step.sel .frm");
+    if (s && s.type === "path" && frm) { frm.querySelector('[data-k="x"]').value = s.x; frm.querySelector('[data-k="y"]').value = s.y; }
+  }
+  $("aName").addEventListener("change", () => { auto.name = $("aName").value.trim().slice(0, 40) || "Auto"; changed(); });
+  $("aAlliance").addEventListener("change", () => { auto.alliance = $("aAlliance").value; changed(); });
+  for (const [id, k, lo, hi] of [["sX", "x", 0, 144], ["sY", "y", 0, 144], ["sH", "h", -360, 360]]) $(id).addEventListener("change", () => { auto.start[k] = num($(id).value, auto.start[k], lo, hi); changed(); });
+  $("btnMirror").addEventListener("click", () => {
+    const m = p => { p.x = 144 - p.x; p.y = 144 - p.y; };
+    const mh = h => { let v = h + 180; while (v > 180) v -= 360; return v; };
+    m(auto.start); auto.start.h = mh(auto.start.h);
+    for (const s of auto.steps) if (s.type === "path") { m(s); s.h = mh(s.h); s.controls.forEach(m); }
+    auto.alliance = auto.alliance === "red" ? "blue" : "red";
+    auto.name = auto.name.replace(/^Red\b/, "§").replace(/^Blue\b/, "Red").replace(/^§/, "Blue");
+    changed();
+  });
+
+  function changed() { saveDraft(); syncForm(); resetSim(); renderJava(); renderJson(); }
+
+  // ---------------------------------------------------------------- run controls and results
+  $("btnRun").addEventListener("click", run);
+  $("btnPause").addEventListener("click", () => { paused = !paused; updateRunUI(); });
+  $("btnReset").addEventListener("click", () => { resetSim(); setStatus("Reset. Drag the dots to shape the paths."); });
+  function updateRunUI() { $("btnPause").disabled = !running; $("btnPause").textContent = paused ? "Resume" : "Pause"; $("btnRun").textContent = running ? "Restart" : "Run auto"; }
+  function setStatus(t, kind) { const s = $("status"); s.textContent = t; s.className = "status" + (kind ? " " + kind : ""); }
+  function renderScore() {
+    const d = $("score");
+    if (!finalScore) { d.innerHTML = `<dt>Run the auto to see the sim score.</dt><dd></dd>`; return; }
+    const sc = finalScore, rows = [["HIVE tips", sc.tips], [`In the up CELL (${sc.cellN})`, sc.cell], ["FLOWER balls", sc.flower], ["FLOWER bottoms", sc.bottom], [`GARDEN (${sc.gardenN})`, sc.garden], ["In the LOADING ZONE", sc.park]];
+    d.innerHTML = rows.map(r => `<dt>${r[0]}</dt><dd>${r[1]}</dd>`).join("") + `<dt class="tot">Total</dt><dd class="tot">${sc.total}</dd><dt>Shots fired</dt><dd>${sim.shots}</dd>`;
+  }
+
+  // ---------------------------------------------------------------- Pedro 3 Java
+  function className(name) { const c = (name || "Auto").replace(/[^A-Za-z0-9 ]/g, " ").split(/\s+/).filter(Boolean).map(w => w[0].toUpperCase() + w.slice(1)).join(""); return (/^[A-Za-z]/.test(c) ? c : "Auto" + c) + (/Auto$/.test(c) ? "" : "Auto"); }
+  const n1 = v => (Math.round(v * 10) / 10).toString();
+  function renderJava() {
+    const cls = className(auto.name), L = [];
+    const poseDecl = [`    private final Pose start = p.of(${n1(auto.start.x)}, ${n1(auto.start.y)}, ${n1(auto.start.h)});`];
+    const pathFns = [], cases = []; let pathN = 0, prevName = "start";
+    const uses = new Set();
+    auto.steps.forEach((s, i) => {
+      const k = cases.length, label = `${STEP_NAMES[s.type]} ${stepSummary(s)}`.replace(/·/g, "-").replace(/°/g, " deg");
+      if (s.type === "path") {
+        pathN++; const nm = `pose${pathN}`, hEnd = s.heading === "tangent" ? tangentEnd(auto, i) : s.h;
+        poseDecl.push(`    private final Pose ${nm} = p.of(${n1(s.x)}, ${n1(s.y)}, ${n1(hEnd)});`);
+        const ctrl = s.controls.map((c, ci) => { const cn = `${nm}Curve${ci + 1}`; poseDecl.push(`    private final Pose ${cn} = p.of(${n1(c.x)}, ${n1(c.y)}, 0); // curve point`); return cn; });
+        const shape = ctrl.length ? `curve(${[prevName, ...ctrl, nm].join(", ")})` : `line(${prevName}, ${nm})`;
+        uses.add(ctrl.length ? "curve" : "line");
+        const interp = s.heading === "constant" ? `.constant(${nm})` : s.heading === "tangent" ? `.tangent()` : `.linear(${prevName}, ${nm})`;
+        pathFns.push(`    private Path path${pathN}() { // step ${i + 1}${s.maxPower < 1 ? `: the sim ran it at ${s.maxPower} power` : ""}\n        return ${shape}${interp};\n    }`);
+        cases.push(`            case ${k}: // ${label}\n                if (first) follower.follow(path${pathN}());\n                if (!follower.isBusy()) next();\n                break;`);
+        prevName = nm;
+      } else if (s.type === "shoot") {
+        cases.push(`            case ${k}: // ${label}\n                if (first) { stepTimer.reset(); flywheelOn(); startFiring(); }\n                if (stepTimer.seconds() >= ${n1(s.seconds)}) { stopFiring(); next(); }\n                break;`);
+      } else if (s.type === "wait") {
+        cases.push(`            case ${k}: // ${label}\n                if (first) stepTimer.reset();\n                if (stepTimer.seconds() >= ${n1(s.seconds)}) next();\n                break;`);
+      } else {
+        const fn = s.type === "flywheel" ? (s.on ? "flywheelOn" : "flywheelOff") : (s.on ? "intakeOn" : "intakeOff");
+        cases.push(`            case ${k}: // ${label}\n                ${fn}();\n                next();\n                break;`);
+      }
+    });
+    L.push(`package org.firstinspires.ftc.teamcode;`, ``,
+      `import com.pedropathing.api.PoseFactory;`, `import com.pedropathing.follower.Follower;`, `import com.pedropathing.math.Pose;`, `import com.pedropathing.paths.Path;`,
+      `import com.qualcomm.robotcore.eventloop.opmode.Autonomous;`, `import com.qualcomm.robotcore.eventloop.opmode.OpMode;`, `import com.qualcomm.robotcore.util.ElapsedTime;`, ``,
+      `import org.firstinspires.ftc.teamcode.pedro.Constants;`, ``);
+    [...uses].sort().forEach(u => L.push(`import static com.pedropathing.api.Paths.${u};`));
+    L.push(``, `/**`, ` * ${auto.name} (${auto.alliance} alliance). Made in the BioBuzz Auto Lab for Pedro Pathing 3.`,
+      ` * Pedro coordinates: inches, (0, 0) at the bottom-left corner with the red wall on the left`,
+      ` * and the audience at the bottom; heading in degrees, 0 = facing the blue wall, counter-clockwise.`, ` */`,
+      `@Autonomous(name = "${auto.name.replace(/["\\]/g, "")}", group = "Pedro")`, `public class ${cls} extends OpMode {`, ``,
+      `    private final PoseFactory p = PoseFactory.degrees();`, ...poseDecl, ``,
+      `    private Follower follower;`, `    private final ElapsedTime stepTimer = new ElapsedTime();`, `    private int step = 0;`, `    private boolean entered = false;`, ``,
+      ...pathFns.flatMap(f => [f, ``]),
+      `    @Override`, `    public void init() {`, `        follower = Constants.create(hardwareMap);`, `        follower.setPose(start);`, `    }`, ``,
+      `    @Override`, `    public void start() {`, `        step = 0;`, `        entered = false;`, `    }`, ``,
+      `    @Override`, `    public void loop() {`, `        follower.update();`, `        boolean first = !entered;`, `        entered = true;`, ``,
+      `        switch (step) {`, ...cases, `            default: // done`, `                break;`, `        }`, ``,
+      `        telemetry.addData("Step", step);`, `        telemetry.update();`, `    }`, ``,
+      `    private void next() {`, `        step++;`, `        entered = false;`, `    }`, ``,
+      `    // ---- Mechanisms: fill these in once the new robot is wired (names from the Build Book) ----`,
+      `    private void flywheelOn()  { /* TODO: spin up the flywheel; auto aim sets turret, hood and RPM */ }`,
+      `    private void flywheelOff() { /* TODO */ }`, `    private void intakeOn()    { /* TODO: intake servo + lift in */ }`, `    private void intakeOff()   { /* TODO */ }`,
+      `    private void startFiring() { /* TODO: run the lift and booster into the flywheel */ }`, `    private void stopFiring()  { /* TODO */ }`, `}`);
+    $("code").value = L.join("\n");
+  }
+  $("btnCopy").addEventListener("click", () => copyText($("code"), "Java copied."));
+  function copyText(el, msg) {
+    const done = () => setStatus(msg);
+    try { navigator.clipboard.writeText(el.value).then(done, () => { el.select(); setStatus("Press Ctrl+C or Cmd+C to copy the selected text."); }); }
+    catch (e) { el.select(); setStatus("Press Ctrl+C or Cmd+C to copy the selected text."); }
+  }
+
+  // ---------------------------------------------------------------- JSON and the shared library
+  function renderJson() { $("json").value = JSON.stringify(auto); }
+  $("btnJsonCopy").addEventListener("click", () => copyText($("json"), "Auto copied as text."));
+  $("btnJsonLoad").addEventListener("click", () => {
+    let a = null; try { a = sanitize(JSON.parse($("json").value)); } catch (e) {}
+    if (!a) { setStatus("That text isn't an auto from this page. Copy one with the Copy button first.", "warn"); return; }
+    auto = a; sel = auto.steps.findIndex(s => s.type === "path"); changed(); setStatus(`Loaded "${auto.name}".`);
+  });
+
+  let db = null, user = null, myId = null, canWrite = true, lib = [], delArmed = null;
+  const slug = s => (s || "auto").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "auto";
+  function renderLib() {
+    const box = $("lib"); box.innerHTML = "";
+    for (const it of lib) {
+      const d = document.createElement("div"); d.className = "it";
+      const sp = document.createElement("span"); sp.textContent = it.name; const sm = document.createElement("small"); sm.dataset.by = it.by || ""; sm.textContent = (it.alliance || "") + (it.at ? " · " + new Date(it.at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : ""); sp.append(sm);
+      const lb = document.createElement("button"); lb.type = "button"; lb.textContent = "Load"; lb.onclick = () => { const a = sanitize(safeParse(it.json)); if (!a) { setStatus("That saved auto couldn't be read.", "warn"); return; } auto = a; sel = auto.steps.findIndex(s => s.type === "path"); changed(); setStatus(`Loaded "${auto.name}".`); };
+      const xb = document.createElement("button"); xb.type = "button"; xb.textContent = delArmed === it.id ? "Sure?" : "Delete"; xb.disabled = !canWrite || mode !== "db";
+      xb.onclick = async () => { if (delArmed !== it.id) { delArmed = it.id; renderLib(); setTimeout(() => { if (delArmed === it.id) { delArmed = null; renderLib(); } }, 4000); return; } delArmed = null; try { await db.collection("autos").doc(it.id).delete(); } catch (e) { setStatus("Couldn't delete that auto.", "warn"); } };
+      d.append(sp, lb, xb); box.append(d);
+    }
+    fillNames();
+  }
+  async function fillNames() {
+    if (!user) return; const els = [...document.querySelectorAll("#lib small[data-by]")].filter(e => e.dataset.by); if (!els.length) return;
+    let ps; try { ps = await user.profiles([...new Set(els.map(e => e.dataset.by))]); } catch (e) { return; }
+    for (const e of els) { const p = ps[e.dataset.by]; if (p && p.name && !e.dataset.named) { e.dataset.named = "1"; e.textContent = p.name + " · " + e.textContent; } }
+  }
+  const safeParse = t => { try { return typeof t === "string" ? JSON.parse(t) : t; } catch (e) { return null; } };
+  let mode = "loading";
+  function localLib() { try { return JSON.parse(localStorage.getItem("autolab-lib") || "[]"); } catch (e) { return []; } }
+  $("btnSave").addEventListener("click", async () => {
+    const id = slug(auto.name), body = { name: auto.name, alliance: auto.alliance, json: JSON.stringify(auto), by: myId, at: new Date().toISOString() };
+    if (mode === "db") {
+      if (!canWrite) { setStatus("You can load autos here but not save them. Ask for Contributor access.", "warn"); return; }
+      try { await db.collection("autos").doc(id).set(body); setStatus(`Saved "${auto.name}" for the team.`); }
+      catch (e) { if (e && e.code === "invalid_argument") { canWrite = false; setStatus("You can load autos here but not save them. Ask for Contributor access.", "warn"); } else setStatus("Couldn't save. Try again in a moment.", "warn"); }
+    } else {
+      const l = localLib().filter(x => x.id !== id); l.unshift({ id, ...body }); try { localStorage.setItem("autolab-lib", JSON.stringify(l.slice(0, 30))); } catch (e) {}
+      lib = l; renderLib(); setStatus(`Saved "${auto.name}" in this browser.`);
+    }
+  });
+  (async () => {
+    const c = window.claude;
+    if (c && typeof c.use === "function") { try { [db, user] = await Promise.all([c.use("db"), c.use("user")]); } catch (e) { db = null; } }
+    if (!db) { mode = "local"; lib = localLib(); renderLib(); $("libNote").textContent = "Saved in this browser only. Open the page in Claude to share autos with the team."; return; }
+    mode = "db";
+    if (user) { try { myId = await user.id(); } catch (e) {} try { if (await user.can("data.write") === false) canWrite = false; } catch (e) {} }
+    $("btnSave").disabled = !canWrite;
+    let live = false; const timer = setTimeout(() => { if (!live) $("libNote").textContent = "Can't reach the team's saved autos right now."; }, 10000);
+    db.collection("autos").orderBy("at", "desc").onSnapshot(snap => {
+      lib = snap.docs.filter(d => d.exists).map(d => ({ id: d.id, ...d.data() }));
+      if (!snap.metadata.fromCache && !live) { live = true; clearTimeout(timer); }
+      $("libNote").textContent = lib.length ? (canWrite ? "Shared with your team." : "Shared with your team. You can load these but not save.") : "No saved autos yet. Save this one to share it with the team.";
+      renderLib();
+    }, () => { clearTimeout(timer); $("libNote").textContent = "The team's saved autos stopped updating. Reload to reconnect."; });
+  })();
+
+  // ---------------------------------------------------------------- start
+  let last = performance.now();
+  function frame(now) { const dt = Math.min(0.1, (now - last) / 1000); last = now; tick(dt); draw(); requestAnimationFrame(frame); }
+  syncForm(); resetSim(); renderJava(); renderJson(); requestAnimationFrame(frame);
+})();
+</script>

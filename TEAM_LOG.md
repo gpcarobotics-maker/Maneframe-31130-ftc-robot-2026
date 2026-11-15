@@ -178,6 +178,7 @@ The plan is manual turret and hood plus field-centric driving first, and auto ai
 - [ ] Confirm the PID holds the target (Error near 0) and tune P if needed
 - [ ] Find the best shooting RPM from the usual spot and write it here
 - [ ] New robot TeleOp (section 5), after the scrimmage
+- [ ] Plan autos in the **BioBuzz Auto Lab** (https://claude.ai/artifact/EsGvvBmmtKn4Ryt5jtRJxa). Pedro coordinates: inches, (0,0) bottom-left, red wall on the left, audience at the bottom, heading 0 = facing blue, CCW. Pedro 3 API: PoseFactory.degrees(), Paths.line/curve, .linear/.constant/.tangent, follower.follow(path), isBusy(), Constants.create(hardwareMap)
 - [ ] Build the new robot using the **BioBuzz Build Book** (https://claude.ai/artifact/73s526dSvjrwGTtVFrTdqW): 3D steps plus a shared checklist; each step unlocks when the last is fully checked
 
 ## 7. Change log
@@ -219,3 +220,4 @@ The plan is manual turret and hood plus field-centric driving first, and auto ai
 | 2026-11-14 | Claude B (in the Doc) | Reviewed the intake/servo split after the fact: AGREE. Proposed the merge rule above; Claude A agreed |
 | 2026-11-14 | Team lead | First scrimmage finished. Team 31130, Rose City League. Claude B is unavailable for now (just Claude A and the team lead). Added a "Claude A context" tab to the Google Doc as a full project summary |
 | 2026-11-14 | Captain (Claude A) | Team decided to rebuild the robot like the BioBuzz sim (goBILDA pods + Pinpoint, hex motor 3:1, Limelight). Published the BioBuzz Build Book artifact: "Before you build" checklist + 13 steps with 3D from the sim's CAD, shared checks |
+| 2026-11-14 | Captain (Claude A) | Published the **BioBuzz Auto Lab** (https://claude.ai/artifact/EsGvvBmmtKn4Ryt5jtRJxa): plan Pedro paths on the field, run them in the Test Drive physics, export **Pedro 3** Java (line/curve, linear/constant/tangent, follow/isBusy; mechanism methods are TODO), with a shared team library of autos. Sources in tools/auto-lab and tools/build-book |
