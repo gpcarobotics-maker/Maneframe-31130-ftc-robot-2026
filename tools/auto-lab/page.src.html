@@ -38,7 +38,7 @@ h2 { font: 700 15px/1.2 var(--disp); letter-spacing: .08em; text-transform: uppe
 
 .app { max-width: 1320px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 14px; align-items: start; }
 .fieldwrap { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px; display: grid; gap: 8px; min-width: 0; }
-.stage { position: relative; width: 100%; aspect-ratio: 1; max-height: calc(100vh - 150px); min-height: 320px; border-radius: 6px; overflow: hidden; background: #070d1e; }
+.stage { -webkit-user-select: none; user-select: none; position: relative; width: 100%; aspect-ratio: 1; max-height: calc(100vh - 150px); min-height: 320px; border-radius: 6px; overflow: hidden; background: #070d1e; }
 .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
 .views { position: absolute; top: 8px; left: 8px; z-index: 2; display: flex; gap: 0; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; background: rgba(12,22,48,.82); }
 .views button { border: 0; border-radius: 0; background: transparent; padding: 6px 11px; font: 700 13px var(--disp); letter-spacing: .06em; text-transform: uppercase; }
@@ -69,7 +69,7 @@ h2 { font: 700 15px/1.2 var(--disp); letter-spacing: .08em; text-transform: uppe
 .step .ttl { flex: 1; font-weight: 700; min-width: 0; cursor: pointer; }
 .step .ttl small { font-weight: 400; color: var(--mute); }
 .step .hd button { padding: 2px 7px; font-size: 12px; }
-.step .warn { color: var(--warn); font-size: 12px; }
+.step .warn, .card > .warn { color: var(--warn); font-size: 12px; }
 .adds { display: flex; flex-wrap: wrap; gap: 6px; }
 .adds button { padding: 5px 9px; font-size: 12px; }
 
@@ -112,6 +112,7 @@ details summary { cursor: pointer; font: 700 15px var(--disp); letter-spacing: .
     <div class="fieldbar">
       <label><input type="checkbox" id="optShoot"> Where you can shoot from</label>
       <label><input type="checkbox" id="optTrace" checked> Last run's track</label>
+      <label><input type="checkbox" id="optKeep" checked> Keep-out zones</label>
       <span id="viewHint"></span>
       <span id="cursor" class="mono"></span>
     </div>
@@ -130,6 +131,7 @@ details summary { cursor: pointer; font: 700 15px var(--disp); letter-spacing: .
         <input id="sY" type="number" step="0.5" aria-label="Start y">
         <input id="sH" type="number" step="5" aria-label="Start heading">
       </div>
+      <div class="warn" id="startWarn" hidden></div>
       <div class="adds"><button id="btnMirror" type="button">Mirror to the other alliance</button></div>
     </div>
 
@@ -190,7 +192,7 @@ details summary { cursor: pointer; font: 700 15px var(--disp); letter-spacing: .
 "use strict";
 (function () {
   const { Sim, FIELD, KIND, R } = SimCore;
-  const { AutoRunner, placeRobot, toPedro, bez, tangentEnd, wrap, IN, F, D2R } = AutoRun;
+  const { AutoRunner, placeRobot, toPedro, bez, tangentEnd, wrap, obstacleAt, pathBlock, BARS, FLOWERS, FLOWER_R, HW, HL, IN, F, D2R } = AutoRun;
   const $ = id => document.getElementById(id);
   const AUTO_LEN = 30;
 
@@ -402,10 +404,19 @@ details summary { cursor: pointer; font: 700 15px var(--disp); letter-spacing: .
   const OX = px => px / 144 * 1024, OY = py => 1024 - py / 144 * 1024;
   let ovSig = "";
   function drawOverlay() {
-    const sig = [$("optShoot").checked, auto.alliance, $("optTrace").checked, trace.length >> 2].join();
+    const sig = [$("optShoot").checked, auto.alliance, $("optTrace").checked, $("optKeep").checked, trace.length >> 2].join();
     if (sig === ovSig) return; ovSig = sig;
     octx.clearRect(0, 0, 1024, 1024);
     if ($("optShoot").checked) { if (!shootMap) shootMap = buildShootMap(); octx.fillStyle = "rgba(79,209,139,.4)"; for (const [x, y] of shootMap) octx.fillRect(OX(x - 2) + 1, OY(y + 2) + 1, 4 / 144 * 1024 - 2, 4 / 144 * 1024 - 2); }
+    if ($("optKeep").checked) {   // where the robot's centre can't go at any heading: obstacles grown by half the robot
+      const g = Math.min(HW, HL), pat = octx.createPattern((() => { const c = document.createElement("canvas"); c.width = c.height = 16; const x = c.getContext("2d"); x.strokeStyle = "rgba(236,90,80,.55)"; x.lineWidth = 3; x.beginPath(); x.moveTo(-4, 20); x.lineTo(20, -4); x.stroke(); return c; })(), "repeat");
+      octx.fillStyle = pat; octx.strokeStyle = "rgba(236,90,80,.85)"; octx.lineWidth = 2.5; octx.beginPath();
+      for (const [bx, y0, y1] of BARS) { const r = 0.8 + g; octx.roundRect ? octx.roundRect(OX(bx - r), OY(y1 + g), OX(2 * r), OX(y1 - y0 + 2 * g), OX(g)) : octx.rect(OX(bx - r), OY(y1 + g), OX(2 * r), OX(y1 - y0 + 2 * g)); }
+      for (const [fx, fy] of FLOWERS) { octx.moveTo(OX(fx + FLOWER_R + g), OY(fy)); octx.arc(OX(fx), OY(fy), OX(FLOWER_R + g), 0, 7); }
+      octx.fill(); octx.stroke();
+      octx.beginPath(); octx.rect(0, 0, 1024, 1024); octx.rect(OX(g), OY(144 - g), OX(144 - 2 * g), OX(144 - 2 * g)); octx.fill("evenodd");
+      octx.strokeStyle = "rgba(236,90,80,.5)"; octx.setLineDash([10, 8]); octx.strokeRect(OX(g), OY(144 - g), OX(144 - 2 * g), OX(144 - 2 * g)); octx.setLineDash([]);
+    }
     if ($("optTrace").checked && trace.length > 1) { octx.beginPath(); trace.forEach((p, k) => k ? octx.lineTo(OX(p.x), OY(p.y)) : octx.moveTo(OX(p.x), OY(p.y))); octx.strokeStyle = "rgba(79,209,139,.95)"; octx.lineWidth = 5; octx.lineJoin = octx.lineCap = "round"; octx.stroke(); }
     octx.fillStyle = "rgba(238,242,251,.85)"; octx.font = "700 19px Figtree, system-ui, sans-serif"; octx.textBaseline = "alphabetic";
     for (let i = 0; i <= 144; i += 24) { octx.textAlign = i === 144 ? "right" : "left"; octx.fillText(String(i), OX(i) + (i === 144 ? -5 : 5), 1018); if (i) { octx.textAlign = "left"; octx.fillText(String(i), 6, OY(i) + (i === 144 ? 20 : 7)); } }
@@ -416,16 +427,16 @@ details summary { cursor: pointer; font: 700 15px var(--disp); letter-spacing: .
   const P = (x, y, z = 0) => new THREE.Vector3(x * IN - F, y * IN - F, z);
   const HON = 0xf4c430, mHon = new THREE.MeshBasicMaterial({ color: HON }), mHonDim = new THREE.MeshBasicMaterial({ color: HON, transparent: true, opacity: 0.55 }),
     mWhite = new THREE.MeshBasicMaterial({ color: 0xeef2fb }), mFoot = new THREE.MeshBasicMaterial({ color: HON, transparent: true, opacity: 0.13, depthWrite: false, side: THREE.DoubleSide }),
-    mStart = new THREE.MeshBasicMaterial({ color: 0x4fd18b }), mGhost = new THREE.LineBasicMaterial({ color: HON, transparent: true, opacity: 0.75 }), mDash = new THREE.LineDashedMaterial({ color: 0xeef2fb, dashSize: 0.04, gapSize: 0.03, transparent: true, opacity: 0.55 });
+    mStart = new THREE.MeshBasicMaterial({ color: 0x4fd18b }), mBad = new THREE.MeshBasicMaterial({ color: 0xec5a50 }), mBadDim = new THREE.MeshBasicMaterial({ color: 0xec5a50, transparent: true, opacity: 0.6 }), mGhost = new THREE.LineBasicMaterial({ color: HON, transparent: true, opacity: 0.75 }), mDash = new THREE.LineDashedMaterial({ color: 0xeef2fb, dashSize: 0.04, gapSize: 0.03, transparent: true, opacity: 0.55 });
   const cubeGeo = new THREE.BoxGeometry(0.05, 0.05, 0.05), puckGeo = new THREE.CylinderGeometry(0.045, 0.045, 0.012, 24), coneGeo = new THREE.ConeGeometry(0.03, 0.07, 14), shaftGeo = new THREE.CylinderGeometry(0.009, 0.009, 1, 8), ringGeo = new THREE.RingGeometry(0.05, 0.07, 32);
   puckGeo.rotateX(Math.PI / 2);
   const pathG = new THREE.Group(); scene.add(pathG);
   const labelCache = new Map();
-  function label(text, on, start) {
-    const key = text + on + start; if (labelCache.has(key)) return labelCache.get(key);
+  function label(text, on, start, bad) {
+    const key = text + on + start + bad; if (labelCache.has(key)) return labelCache.get(key);
     const c = document.createElement("canvas"); c.width = c.height = 96; const x = c.getContext("2d");
-    x.beginPath(); x.arc(48, 48, 40, 0, 7); x.fillStyle = start ? "#4fd18b" : on ? "#f4c430" : "#13224a"; x.fill(); x.lineWidth = 7; x.strokeStyle = start ? "#0c1630" : "#f4c430"; x.stroke();
-    x.fillStyle = start || on ? "#14203f" : "#f4c430"; x.font = "700 46px Figtree, system-ui, sans-serif"; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(text, 48, 51);
+    x.beginPath(); x.arc(48, 48, 40, 0, 7); x.fillStyle = bad ? "#ec5a50" : start ? "#4fd18b" : on ? "#f4c430" : "#13224a"; x.fill(); x.lineWidth = 7; x.strokeStyle = bad ? "#fff" : start ? "#0c1630" : "#f4c430"; x.stroke();
+    x.fillStyle = bad ? "#fff" : start || on ? "#14203f" : "#f4c430"; x.font = "700 46px Figtree, system-ui, sans-serif"; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(text, 48, 51);
     const m = new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false, transparent: true }); labelCache.set(key, m); return m;
   }
   function clearPaths() { while (pathG.children.length) { const c = pathG.children.pop(); c.traverse(o => { if (o.userData.own && o.geometry) o.geometry.dispose(); }); } }
@@ -455,7 +466,10 @@ details summary { cursor: pointer; font: 700 15px var(--disp); letter-spacing: .
       if (s.type !== "path") return;
       const a = lastPoseOf(i), pts = [{ x: a.x, y: a.y }, ...s.controls, { x: s.x, y: s.y }], on = i === sel, now = running && runner && runner.i === i;
       const samples = []; for (let k = 0; k <= 80; k++) { const p = bez(pts, k / 80); samples.push(P(p.x, p.y, 0.012)); }
-      if (Math.hypot(s.x - a.x, s.y - a.y) > 0.3 || s.controls.length) pathG.add(own(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(samples), 160, on || now ? 0.014 : 0.009, 6, false), on || now ? mHon : mHonDim)));
+      const blk = pathBlock(a, s), lit = on || now;
+      let len = 0; for (let k = 1; k < samples.length; k++) len += samples[k].distanceTo(samples[k - 1]);
+      if (len > 0.01) { const clean = samples.filter((p, k) => k === 0 || p.distanceTo(samples[k - 1]) > 1e-4); if (clean.length > 1) pathG.add(own(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(clean), 160, lit ? 0.014 : 0.009, 6, false), blk ? (lit ? mBad : mBadDim) : lit ? mHon : mHonDim))); }
+      if (blk) sprite(blk.x, blk.y, label("!", false, false, true), 0.1);
       if (s.controls.length) { const l = own(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts.map(p => P(p.x, p.y, 0.02))), mDash)); l.computeLineDistances(); pathG.add(l); }
       const h = s.heading === "tangent" ? tangentEnd(auto, i) * D2R : s.h * D2R;
       footprint(s.x, s.y, h, on ? mGhost : new THREE.LineBasicMaterial({ color: HON, transparent: true, opacity: 0.25 }));
@@ -512,12 +526,13 @@ details summary { cursor: pointer; font: 700 15px var(--disp); letter-spacing: .
     return best;
   }
   const snap = v => Math.round(Math.min(144, Math.max(0, v)) * 2) / 2;
+  const snapIn = v => Math.round(Math.min(144 - HW, Math.max(HW, v)) * 2) / 2;   // robot centre: at least half a robot from the walls
   let drag = null, orbitDrag = null;
   cv.addEventListener("pointerdown", e => {
     const best = pick(e);
     if (best) {
       if (running) resetSim();
-      drag = best; if (best.i != null && sel !== best.i) { sel = best.i; renderSteps(); }
+      drag = best; drag.moved = false; if (best.i != null && sel !== best.i) { sel = best.i; renderSteps(); }
       cv.setPointerCapture(e.pointerId); e.preventDefault(); return;
     }
     if (view === "orbit") { orbitDrag = { x: e.clientX, y: e.clientY, yaw: orb.yaw, pitch: orb.pitch }; cv.setPointerCapture(e.pointerId); cv.style.cursor = "grabbing"; e.preventDefault(); }
@@ -528,20 +543,26 @@ details summary { cursor: pointer; font: 700 15px var(--disp); letter-spacing: .
     $("cursor").textContent = inField ? `x ${snap(p.x).toFixed(1)}  y ${snap(p.y).toFixed(1)}` : "";
     if (!drag) { cv.style.cursor = pick(e) ? "grab" : view === "orbit" ? "move" : ""; return; }
     if (!p) return; cv.style.cursor = "grabbing";
-    const x = snap(p.x), y = snap(p.y);
-    if (drag.kind === "start") { auto.start.x = x; auto.start.y = y; placeRobot(sim, auto.start); }
+    const ctrl = drag.kind === "ctrl", x = ctrl ? snap(p.x) : snapIn(p.x), y = ctrl ? snap(p.y) : snapIn(p.y);
+    const cur = drag.kind === "start" ? auto.start : drag.kind === "end" ? auto.steps[drag.i] : auto.steps[drag.i].controls[drag.ci];
+    if (!cur || (cur.x === x && cur.y === y)) return;
+    drag.moved = true;
+    if (drag.kind === "start") { auto.start.x = x; auto.start.y = y; placeRobot(sim, auto.start); renderStartWarn(); }
     else if (drag.kind === "end") { auto.steps[drag.i].x = x; auto.steps[drag.i].y = y; }
     else auto.steps[drag.i].controls[drag.ci] = { x, y };
     syncForm(); renderStepsLight();
   });
-  const endDrag = () => { orbitDrag = null; cv.style.cursor = ""; if (drag) { drag = null; changed(); } };
+  let lastHandleUp = 0;
+  const endDrag = () => { orbitDrag = null; cv.style.cursor = ""; if (drag) { const moved = drag.moved; drag = null; lastHandleUp = performance.now(); if (moved) changed(); } };
   cv.addEventListener("pointerup", endDrag); cv.addEventListener("pointercancel", endDrag);
   cv.addEventListener("pointerleave", () => { if (!drag) $("cursor").textContent = ""; });
   cv.addEventListener("wheel", e => { if (view !== "orbit") return; e.preventDefault(); orb.dist = Math.max(1.6, Math.min(8, orb.dist * Math.exp(e.deltaY * 0.0012))); }, { passive: false });
   cv.addEventListener("dblclick", e => {
-    if (!canEdit()) return; const p = floorAt(e); if (!p || p.x < 0 || p.x > 144 || p.y < 0 || p.y > 144) return;
-    const a = lastPoseOf(auto.steps.length);
-    auto.steps.push({ type: "path", x: snap(p.x), y: snap(p.y), h: a.h, heading: "linear", controls: [], maxPower: 1 });
+    if (!canEdit() || pick(e) || performance.now() - lastHandleUp < 450) return;   // double-clicking a marker doesn't add a path on top of it
+    const p = floorAt(e); if (!p || p.x < 0 || p.x > 144 || p.y < 0 || p.y > 144) return;
+    const a = lastPoseOf(auto.steps.length), x = snapIn(p.x), y = snapIn(p.y);
+    if (Math.hypot(x - a.x, y - a.y) < 1) return;
+    auto.steps.push({ type: "path", x, y, h: a.h, heading: "linear", controls: [], maxPower: 1 });
     sel = auto.steps.length - 1; changed();
   });
 
@@ -570,9 +591,13 @@ details summary { cursor: pointer; font: 700 15px var(--disp); letter-spacing: .
   function stepWarning(i) {
     const s = auto.steps[i];
     if (s.type === "shoot") { const p = lastPoseOf(i); if (!canShootAt(p.x, p.y)) return "The sim can't shoot from here: too close, or on the wrong side of the HIVE."; }
+    if (s.type === "path") { const b = blockOf(i); if (b) return `This path runs into ${b.what} near (${b.x.toFixed(0)}, ${b.y.toFixed(0)}), so the robot will get stuck. Move the end point or add a curve point to go around (the red zones on the floor).`; }
     return "";
   }
+  function blockOf(i) { const s = auto.steps[i]; return s && s.type === "path" ? pathBlock(lastPoseOf(i), s) : null; }
+  function renderStartWarn() { const w = obstacleAt(auto.start.x, auto.start.y, auto.start.h * D2R, 0.3); const e = $("startWarn"); e.hidden = !w; e.textContent = w ? `The robot overlaps ${w} here. Move the start pose.` : ""; }
   function renderSteps() {
+    renderStartWarn();
     const box = $("steps"); box.innerHTML = "";
     auto.steps.forEach((s, i) => {
       const d = document.createElement("div"); d.className = "step" + (i === sel ? " sel" : ""); d.dataset.i = i;
@@ -629,7 +654,7 @@ details summary { cursor: pointer; font: 700 15px var(--disp); letter-spacing: .
   $("steps").addEventListener("keydown", e => { if ((e.key === "Enter" || e.key === " ") && e.target.classList.contains("ttl")) { e.preventDefault(); e.target.click(); } });
   document.querySelectorAll("[data-add]").forEach(b => b.addEventListener("click", () => {
     const t = b.dataset.add, a = lastPoseOf(auto.steps.length);
-    const s = t === "path" ? { type: "path", x: snap(a.x + 24), y: snap(a.y), h: a.h, heading: "linear", controls: [], maxPower: 1 }
+    const s = t === "path" ? { type: "path", x: snapIn(a.x + (a.x > 100 ? -24 : 24)), y: snapIn(a.y), h: a.h, heading: "linear", controls: [], maxPower: 1 }
       : t === "shoot" ? { type: "shoot", seconds: 3 } : t === "wait" ? { type: "wait", seconds: 1 } : { type: t, on: true };
     auto.steps.push(s); sel = auto.steps.length - 1; changed();
   }));
@@ -637,8 +662,8 @@ details summary { cursor: pointer; font: 700 15px var(--disp); letter-spacing: .
   function syncForm() {
     $("aName").value = auto.name; $("aAlliance").value = auto.alliance;
     $("sX").value = auto.start.x; $("sY").value = auto.start.y; $("sH").value = auto.start.h;
-    const s = auto.steps[sel], frm = document.querySelector(".step.sel .frm");
-    if (s && s.type === "path" && frm) { frm.querySelector('[data-k="x"]').value = s.x; frm.querySelector('[data-k="y"]').value = s.y; }
+    const s = auto.steps[sel], frm = document.querySelector(`.step.sel[data-i="${sel}"] .frm`);   // only the form that belongs to this step
+    if (s && s.type === "path" && frm) { const ix = frm.querySelector('[data-k="x"]'), iy = frm.querySelector('[data-k="y"]'); if (ix) ix.value = s.x; if (iy) iy.value = s.y; }
   }
   $("aName").addEventListener("change", () => { auto.name = $("aName").value.trim().slice(0, 40) || "Auto"; changed(); });
   $("aAlliance").addEventListener("change", () => { auto.alliance = $("aAlliance").value; changed(); });
@@ -653,7 +678,7 @@ details summary { cursor: pointer; font: 700 15px var(--disp); letter-spacing: .
     changed();
   });
 
-  function changed() { saveDraft(); syncForm(); resetSim(); renderJava(); renderJson(); }
+  function changed() { saveDraft(); resetSim(); syncForm(); renderJava(); renderJson(); }   // resetSim rebuilds the step cards first
 
   // ---------------------------------------------------------------- run controls and results
   $("btnRun").addEventListener("click", run);

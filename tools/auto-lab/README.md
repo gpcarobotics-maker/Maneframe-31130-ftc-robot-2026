@@ -9,3 +9,6 @@ Live page: https://claude.ai/artifact/EsGvvBmmtKn4Ryt5jtRJxa
 The field is 3D (three.js r128, the Test Drive sim's scene and CAD robot) with Plan, 3D, Driver and Chase views. It needs `robotData.json` next to it, the same file as the Build Book: the JSON inside the `<script id="robotData">` tag of `docs/BioBuzz Test Drive.html`.
 
 To rebuild `index.html`, replace `/*__SIMCORE__*/` with that script and `/*__AUTORUN__*/` with `autorun.js`.
+
+
+Tests (Node, needs `simcore.js` extracted from the sim next to them): `node fuzz.cjs` runs hand-made paths, `node fuzz2.cjs` runs 300 random autos that avoid obstacles; all should finish with no log messages.
