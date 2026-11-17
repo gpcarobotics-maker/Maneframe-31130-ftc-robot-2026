@@ -39,7 +39,7 @@ rep("<tr><td>N, V, G</td><td>NECTAR, view, field-centric</td></tr>",
     "<tr><td>N, V, G</td><td>NECTAR, view, field-centric</td></tr><tr><td>X</td><td>X-ray on/off</td></tr><tr><td>Drag, scroll</td><td>Turn and zoom, in Inspect view</td></tr>")
 rep("""<details><summary>What's real here</summary>""", """<details><summary>What changed from the CAD</summary>
     <p class="note"><b>Turntable:</b> the mounting plate (254 mm square, 139.7 mm hole), bearing (145 mm inside, 203 mm outside), 200-tooth gear (256.5 mm across) and 50-tooth pinion are drawn from AndyMark's STEP file. The CAD had a 213 mm gear and a 12.6 mm pinion.</p>
-    <p class="note"><b>Turret motor:</b> the real pinion sits 158.75 mm from the turret's centre, and no upright motor fits there. It's shown as a flat motor over the right drive pod, the one pocket with room. Its size is a stand-in: check your motor against 60 mm of height.</p>
+    <p class="note"><b>Turret motor:</b> the real pinion sits 158.75 mm from the turret's centre, and no upright motor fits there. It's shown as a REV Core Hex (100 × 41 × 36 mm) lying over the right drive pod, the one pocket with room: 60 mm of height.</p>
     <p class="note"><b>Removed:</b> the CAD's old turret motor, its mount and the turret stop finger, which would hit the real pinion. The robot needs a new hard stop.</p>
     <p class="note"><b>Not changed:</b> the physics. Turret speed, ball path and shots are the Test Drive sim's.</p>
   </details>

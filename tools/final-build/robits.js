@@ -27,9 +27,9 @@
       const [px, py] = pin, a = Math.atan2(py, px);
       // am-5020_50 pinion: 50 teeth, 66 over the tips, 12.7 wide, 3/8 in hex bore
       const g = put(gear(50, 33.02, 30.2, 4.8, 12.7), grey, fixed, px, py, 10.35); g.rotation.z = a + Math.PI / 50;
-      // am-5012 side motor mount under the plate edge, then a flat right-angle motor (REV Core Hex size, a stand-in) and its shaft
+      // am-5012 side motor mount under the plate edge, then a REV Core Hex lying along the pod (100 x 41 x 36 mm, from REV's STEP) and its shaft
       const br = put(new THREE.BoxGeometry(70, 58, 3.2), alu, fixed, px - 14 * Math.cos(a), py - 14 * Math.sin(a), -7.2); br.rotation.z = a;
-      const mo = put(new THREE.BoxGeometry(72, 55, 47), motor, fixed, px + 6 * Math.cos(a), py + 6 * Math.sin(a), -32.4); mo.rotation.z = a + Math.PI / 2;
+      const mo = put(new THREE.BoxGeometry(100, 41, 36), motor, fixed, px, py, -26.9); mo.rotation.z = a + Math.PI / 2;
       const sh = put(new THREE.CylinderGeometry(2.6, 2.6, 38, 6), race, fixed, px, py, 6); sh.rotation.x = Math.PI / 2;
     }
     return out;

@@ -118,7 +118,7 @@ td .sku { font: 400 13px var(--mono); white-space: nowrap; }
     <div class="tw"><table>
       <thead><tr><th>Turret drive option</th><th class="n">Turret speed</th><th>Fits the free pocket?</th><th>Notes</th></tr></thead>
       <tbody>
-        <tr><td><b>REV Core Hex</b>, flat under the side mount</td><td class="n">31 rpm · 188°/s</td><td>Likely. Check its height against 60 mm</td><td>Built-in encoder: 1,152 counts per turret turn. The sim assumed 270°/s, so the real turret is about 30% slower</td></tr>
+        <tr><td><b>REV Core Hex</b>, flat under the side mount</td><td class="n">31 rpm · 188°/s</td><td>Yes. It's 100 × 41 × 36 mm: lay it along the pod with the shaft up</td><td>Built-in encoder: 1,152 counts per turret turn. The sim assumed 270°/s, so the real turret is about 30% slower</td></tr>
         <tr><td><b>AndyMark 5-turn servo</b> (am-5216 or am-5217)</td><td class="n">set by the servo</td><td>Yes, it's the kit's standard drive</td><td>5 turns ÷ 4 = 450° of travel, more than the 347° you need. Frees a motor port</td></tr>
         <tr><td><b>HD Hex + 3:1 cartridge</b> (as first planned)</td><td class="n">519 rpm</td><td>No, about 100 mm tall</td><td>Far too fast to aim and only 1.2 N·m. It would need about 60:1 of cartridges first</td></tr>
       </tbody></table></div>
@@ -135,6 +135,7 @@ td .sku { font: 400 13px var(--mono); white-space: nowrap; }
     <h2>Real parts and STEP files</h2>
     <p class="lede">Every bought part on the robot, matched to a real product with the maker's own STEP file. Import a STEP into Onshape with the + button, then Import. Rows marked "confirm" are my best match: check them against what's in your bins.</p>
     <div class="tw"><table><thead><tr><th>Part</th><th class="n">Qty</th><th>Used for</th><th>Part number</th><th>STEP file</th><th>How sure</th></tr></thead><tbody id="partRows"></tbody></table></div>
+    <p class="note"><b>Already assembled for you.</b> In the <b>robot-cad</b> folder inside Robotics FTC: <b>BioBuzz_real_parts.step</b> (121 MB) has every part above that has a STEP file, placed where the CAD has it, and <b>BioBuzz_real_parts_lite.step</b> (67 MB) is the same with only each part's outer bodies. <b>BioBuzz_custom_parts.stl</b> is everything you make yourself, in the same position. Import a STEP and the STL into one Onshape document and they line up.</p>
     <h3 style="margin-top:8px">Custom parts (no STEP to download: you make these)</h3>
     <div class="tw"><table><thead><tr><th>Part</th><th class="n">Qty</th><th>Make by</th><th>Size in the CAD</th></tr></thead><tbody id="customRows"></tbody></table></div>
     <p class="note"><b>The frame isn't drawn from real channel.</b> In the CAD the chassis frame is 23 custom-shaped bodies, not REV extrusion or channel. Before you cut anything, decide: redraw it with real channel (and add those STEP files here), or commit to CNC plates and treat the frame as custom.</p>
@@ -220,10 +221,10 @@ const FINDINGS = [
     found: ["4 drive, flywheel, turret, lift, booster = 8 motors, the limit. Servos: 2 of 8."],
     why: "Any new mechanism has to be a servo or a spring.",
     fix: ["If the turret moves to AndyMark's 5-turn servo, a motor port opens up, for example for a second intake roller."] },
-  { sev: "check", title: "Which motors are the lift and booster?",
-    found: ["The sim's notes say REV Core Hex for both.", "In the CAD both are drawn 36 mm across and 100 mm long, which is the shape of an HD Hex."],
-    why: "The mounts and the space they need are different.",
-    fix: ["Confirm which you're using, then fix the CAD or the parts list to match."] },
+  { sev: "check", title: "Mecanum wheels on the right corners",
+    found: ["The set has 2 left-hand wheels (REV-41-1656) and 2 right-hand wheels (REV-41-1657).", "In the assembled STEP I put the left-hand ones at front left and rear right. That's a guess."],
+    why: "With one wheel swapped the robot drives forward fine and won't strafe.",
+    fix: ["Seen from above, the rollers must make an X. Swap a pair if they make a diamond."] },
   { sev: "check", title: "Can you swap the battery fast?",
     found: ["The battery sits between the two hubs, under the turret's overhang, with the odometry pods under it."],
     why: "You get a few minutes between matches.",
@@ -273,16 +274,16 @@ $("ideaList").innerHTML = IDEAS.map(([tag, t, body, fixes]) => `<article class="
 // ---------------------------------------------------------------- parts
 const REV = sku => `https://www.revrobotics.com/content/cad/${sku}.STEP`;
 const PARTS = [
-  ["REV HD Hex Motor", 5, "4 drive wheels, flywheel", "REV-41-1291", REV("REV-41-1291"), "From the sim's notes"],
-  ["REV UltraPlanetary Gearbox Kit (3:1, 4:1, 5:1 cartridges)", 5, "On each HD Hex", "REV-41-1600", REV("REV-41-1600"), "From the sim's notes"],
-  ["REV Core Hex Motor", 3, "Lift, booster, turret (proposed)", "REV-41-1300", REV("REV-41-1300"), "Lift and booster from the sim; turret is my proposal. Confirm"],
+  ["REV HD Hex Motor with UltraPlanetary Gearbox Kit", 5, "4 drive wheels, flywheel", "REV-41-1600", REV("REV-41-1600"), "Motor matches the CAD: 40 mm across, 84 mm long. This STEP has the motor and gearbox together"],
+  ["REV HD Hex Motor alone", "—", "Same motor, without the gearbox", "REV-41-1291", REV("REV-41-1291"), "Only if you want the bare motor"],
+  ["REV Core Hex Motor", 3, "Lift, booster, turret (proposed)", "REV-41-1300", REV("REV-41-1300"), "Lift and booster match the CAD (100 × 41 × 36 mm). The turret one is my proposal"],
   ["REV 75 mm Mecanum Wheel, left", 2, "Drive", "REV-41-1656", REV("REV-41-1656"), "Matches the CAD: 75 mm. Sold as set REV-45-1655"],
   ["REV 75 mm Mecanum Wheel, right", 2, "Drive", "REV-41-1657", REV("REV-41-1657"), "Matches the CAD"],
   ["REV Control Hub", 1, "Rear left", "REV-31-1595", REV("REV-31-1595"), "Matches the CAD: 103 × 143 × 30 mm"],
   ["REV Expansion Hub", 1, "Rear right", "REV-31-1153", REV("REV-31-1153"), "Matches the CAD"],
-  ["REV 12V Slim Battery", 1, "Rear centre", "REV-31-1302", REV("REV-31-1302"), "Confirm which battery you have"],
-  ["REV Switch Cable and Bracket", 1, "Rear right corner", "REV-31-1387", REV("REV-31-1387"), "Confirm"],
-  ["REV Smart Robot Servo V2, Balanced", 2, "Intake (continuous), hood", "REV-41-3334", REV("REV-41-3334"), "Intake from the sim; hood servo type isn't stated. Confirm"],
+  ["REV 12V Slim Battery", 1, "Rear centre", "REV-31-1302", REV("REV-31-1302"), "Matches the CAD: 90.5 × 148 × 25 mm"],
+  ["REV Switch Cable and Bracket", 1, "Rear right corner", "REV-31-1387", REV("REV-31-1387"), "Matches the CAD: 45 × 38 × 31 mm"],
+  ["REV Smart Robot Servo V2, Balanced", 2, "Intake (continuous), hood", "REV-41-3334", REV("REV-41-3334"), "Matches the CAD: 20 × 44 × 54 mm, for both"],
   ["goBILDA Swingarm Odometry Pod, 48 mm wheel", 2, "Under the battery", "3110-0001-0001", "https://www.gobilda.com/content/step_files/3110-0001-0001.zip", "Matches the CAD: 43 mm wide"],
   ["goBILDA Pinpoint Odometry Computer", 1, "Above the strafe pod", "3110-0002-0001", "https://www.gobilda.com/content/step_files/3110-0002-0001.zip", "You told me this one"],
   ["AndyMark Robits 5.5 in. ID Turntable Assembly", 1, "Turret", "am-5470", "https://documents.andymark.com/aa6f3d33ff4ee295624ef8d11ec31c14b046297c74b4911b2336119686e1fb3f/am-5470%205.5IN%20Robits%20Turntable%20(Base%20Assembly).STEP", "You told me this one. Measured from this file"],
