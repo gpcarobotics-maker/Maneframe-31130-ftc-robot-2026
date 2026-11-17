@@ -1,0 +1,429 @@
+<title>BioBuzz Design Review</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;700&family=IBM+Plex+Mono:wght@400;600&family=Figtree:wght@400;600;700&display=swap">
+<style>
+/* Layout: an inspection sheet. A verdict strip, then findings sorted by how much they hurt, then to-scale drawings, ideas and the parts list. */
+:root {
+  --bg:#f3f5f9; --sheet:#ffffff; --ink:#14203f; --muted:#56637f; --line:#d5dbe8; --navy:#16316e; --honey:#b98500; --honey-soft:#fff3cf;
+  --must:#b3261e; --must-soft:#fde9e7; --should:#9a5b00; --should-soft:#fdf0d8; --check:#1f5fa8; --check-soft:#e3eefb; --ok:#1e7a45; --ok-soft:#e2f4e9;
+  --pollen:#e2b400; --nectar:#d8332b; --steel:#8b95a6; --part:#c9d1df; --gear:#2a2e36;
+  --disp:"Saira Condensed","Arial Narrow",Arial,sans-serif; --body:"Figtree",system-ui,sans-serif; --mono:"IBM Plex Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg:#0c1630; --sheet:#13224a; --ink:#eef2fb; --muted:#a3b2d6; --line:#2c4282; --navy:#9db8ff; --honey:#f4c430; --honey-soft:#3a3212;
+  --must:#ff8a80; --must-soft:#4a1f1c; --should:#ffc266; --should-soft:#45330f; --check:#8fc0ff; --check-soft:#17335c; --ok:#7fe0a6; --ok-soft:#143a26;
+  --pollen:#f6d21f; --nectar:#ff6b61; --steel:#93a0bd; --part:#33477f; --gear:#070b16; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg:#0c1630; --sheet:#13224a; --ink:#eef2fb; --muted:#a3b2d6; --line:#2c4282; --navy:#9db8ff; --honey:#f4c430; --honey-soft:#3a3212;
+  --must:#ff8a80; --must-soft:#4a1f1c; --should:#ffc266; --should-soft:#45330f; --check:#8fc0ff; --check-soft:#17335c; --ok:#7fe0a6; --ok-soft:#143a26;
+  --pollen:#f6d21f; --nectar:#ff6b61; --steel:#93a0bd; --part:#33477f; --gear:#070b16; color-scheme: dark }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 16px/1.55 var(--body); margin: 0; }
+.wrap { max-width: 1000px; margin: 0 auto; padding-block: 28px 56px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 28px; }
+.eyebrow { font: 600 12px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { font: 700 clamp(34px, 6vw, 52px)/1 var(--disp); margin: 6px 0 10px; text-wrap: balance; }
+h2 { font: 700 26px/1.1 var(--disp); letter-spacing: .01em; margin: 0 0 4px; text-wrap: balance; }
+h3 { font: 700 17px/1.3 var(--body); margin: 0; text-wrap: balance; }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--navy); }
+.lede { color: var(--muted); max-width: 70ch; }
+section { display: grid; gap: 14px; min-width: 0; }
+.tally { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.tally a { text-decoration: none; color: inherit; background: var(--sheet); border: 1.5px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; gap: 2px; }
+.tally b { font: 700 34px/1 var(--disp); font-variant-numeric: tabular-nums; }
+.tally span { font-size: 13.5px; color: var(--muted); }
+.tally .must b { color: var(--must); } .tally .should b { color: var(--should); } .tally .check b { color: var(--check); } .tally .ok b { color: var(--ok); }
+.jump { display: flex; flex-wrap: wrap; gap: 8px; font-size: 14px; }
+.jump a { background: var(--sheet); border: 1.5px solid var(--line); border-radius: 99px; padding: 4px 12px; text-decoration: none; color: var(--ink); }
+.jump a:hover, .tally a:hover { border-color: var(--honey); } a:focus-visible, summary:focus-visible { outline: 2px solid var(--honey); outline-offset: 2px; }
+.find { background: var(--sheet); border: 1.5px solid var(--line); border-radius: 12px; padding: 16px 18px; display: grid; gap: 10px; min-width: 0; }
+.find header { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: baseline; }
+.chip { font: 600 11.5px var(--mono); letter-spacing: .06em; text-transform: uppercase; border-radius: 5px; padding: 2px 8px; white-space: nowrap; }
+.chip.must { background: var(--must-soft); color: var(--must); } .chip.should { background: var(--should-soft); color: var(--should); } .chip.check { background: var(--check-soft); color: var(--check); } .chip.ok { background: var(--ok-soft); color: var(--ok); }
+.find dl { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 6px 14px; margin: 0; }
+.find dt { font: 600 12px var(--mono); letter-spacing: .04em; text-transform: uppercase; color: var(--muted); padding-top: 3px; }
+.find dd { margin: 0; min-width: 0; } .find dd ul { margin: 0; padding-left: 18px; display: grid; gap: 3px; }
+.rule { font: 400 12.5px var(--mono); color: var(--muted); }
+.oklist { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 8px; }
+.oklist li { background: var(--ok-soft); border-radius: 9px; padding: 9px 12px; font-size: 14.5px; }
+.oklist b { color: var(--ok); }
+figure { margin: 0; background: var(--sheet); border: 1.5px solid var(--line); border-radius: 12px; padding: 14px; display: grid; gap: 8px; min-width: 0; }
+figure .draw { overflow-x: auto; }
+figure svg { display: block; width: 100%; margin: 0 auto; height: auto; color: var(--ink); font-family: var(--mono); }
+figcaption { font-size: 14px; color: var(--muted); max-width: 75ch; }
+.figs { display: grid; gap: 14px; }
+.keyline { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); }
+.keyline i { display: inline-block; width: 12px; height: 12px; border-radius: 50%; vertical-align: -1px; margin-right: 5px; }
+.tw { overflow-x: auto; background: var(--sheet); border: 1.5px solid var(--line); border-radius: 12px; }
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+th { font: 600 12px var(--mono); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); text-align: left; padding: 10px 12px; border-bottom: 1.5px solid var(--line); white-space: nowrap; }
+td { padding: 9px 12px; border-top: 1px solid var(--line); vertical-align: top; }
+td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+td .sku { font: 400 13px var(--mono); white-space: nowrap; }
+.sure { font-size: 12.5px; color: var(--muted); }
+.ideas { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 12px; }
+.idea { background: var(--sheet); border: 1.5px solid var(--line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 6px; align-content: start; }
+.idea .tag { font: 600 11.5px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--honey); }
+.idea p { font-size: 15px; }
+.note { background: var(--honey-soft); border-radius: 10px; padding: 12px 14px; font-size: 14.5px; max-width: none; }
+.src { font-size: 14px; color: var(--muted); } .src li { margin: 3px 0; }
+@media (max-width: 560px) { .find dl { grid-template-columns: minmax(0, 1fr); } .find dt { padding-top: 6px; } }
+/* drawing marks, coloured from the tokens */
+.s-line { stroke: currentColor; fill: none; } .s-thin { stroke: var(--steel); fill: none; } .s-dash { stroke: var(--steel); fill: none; stroke-dasharray: 5 4; }
+.f-part { fill: var(--part); stroke: var(--steel); } .f-plate { fill: var(--steel); stroke: none; } .f-dark { fill: var(--gear); stroke: var(--steel); }
+.f-pollen { fill: var(--pollen); stroke: var(--ink); stroke-width: 1; } .f-nectar { fill: none; stroke: var(--nectar); stroke-width: 2; stroke-dasharray: 6 4; }
+.f-band { fill: #e8902a; stroke: none; } .f-bad { fill: var(--must); stroke: none; } .f-good { fill: var(--ok); stroke: none; } .f-none { fill: none; }
+.t { fill: currentColor; font-size: 12px; } .t-m { fill: var(--muted); font-size: 11.5px; } .t-bad { fill: var(--must); font-size: 12px; font-weight: 600; } .t-good { fill: var(--ok); font-size: 12px; font-weight: 600; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Team 31130 · Rose City League · BIOBUZZ 2026-27</div>
+    <h1>BioBuzz Design Review</h1>
+    <p class="lede">A check of the new robot before your mentor sees it. Every size comes from the robot's own CAD (the model inside the Test Drive sim), the Competition Manual (Team Update 09) and AndyMark's STEP file for the turntable. Fix the red ones first.</p>
+  </header>
+
+  <div class="tally" id="tally"></div>
+  <nav class="jump" aria-label="Sections">
+    <a href="#findings">Findings</a><a href="#ballpath">How it collects balls</a><a href="#turntable">Turntable fit</a><a href="#ideas">Ideas to fit both balls</a><a href="#parts">Real parts and STEP files</a><a href="#where">Where each part sits</a>
+  </nav>
+
+  <section id="findings">
+    <h2>Findings</h2>
+    <p class="lede">Each one says what was measured, why it matters and what to do.</p>
+    <div id="findList" style="display:grid;gap:12px"></div>
+  </section>
+
+  <section id="passes">
+    <h2>What already passes</h2>
+    <ul class="oklist" id="okList"></ul>
+  </section>
+
+  <section id="ballpath">
+    <h2>How it collects balls</h2>
+    <p class="lede">Three cuts through the robot, drawn to scale in millimetres. POLLEN is 71 mm across and NECTAR is 91 mm, so every gap on the path has to work for both. To watch it happen, open the <a href="https://claude.ai/artifact/Xb9AfAQjssNirSPoWULm61">Final Build sim</a> and switch on X-ray.</p>
+    <div class="keyline"><span><i style="background:var(--pollen)"></i>POLLEN, 71 mm</span><span><i style="border:2px dashed var(--nectar)"></i>NECTAR, 91 mm</span><span><i style="background:#e8902a;border-radius:2px"></i>lift bands</span></div>
+    <div class="figs">
+      <figure><div class="draw" id="figA"></div><figcaption><b>1. Intake, from the side.</b> The flaps sweep a ball back along the floor, through the funnel, to the lift's mouth. The shaft sits 84 mm above the floor: a POLLEN rolls under with 13 mm to spare, a NECTAR is 7 mm too tall and has to squash.</figcaption></figure>
+      <figure><div class="draw" id="figB"></div><figcaption><b>2. Lift and turntable, from the front.</b> Three cord bands on the left pull the ball up against a sprung wall on the right. The wall rests 61 mm from the bands and opens to 82 mm, so both balls are gripped. Then the ball has to pass through the turntable's 139.7 mm hole, so it must be centred before it gets there.</figcaption></figure>
+      <figure><div class="draw" id="figC"></div><figcaption><b>3. Turret, from the side.</b> The booster roller pushes the top ball up its pad into the gap between the flywheel and the hood. Both gaps are about 60 mm. That's right for POLLEN (squeezed about 10 mm) and far too small for NECTAR (squeezed about 30 mm).</figcaption></figure>
+    </div>
+  </section>
+
+  <section id="turntable">
+    <h2>Turntable fit</h2>
+    <p class="lede">The real AndyMark Robits 5.5 in. ID turntable (am-5470) dropped onto the robot, seen from above with the front at the top. Its heights match the CAD: plate top at 130 mm, bearing to 140 mm, gear to 153.4 mm, and the turret base sits at 153 mm. What changes is the gear's size and where the drive goes.</p>
+    <figure><div class="draw" id="figD"></div><figcaption>The pinion has to sit on the dashed circle, 158.75 mm from the turret's centre. Red dots are places where a motor hanging under the plate hits something in the CAD (drive pods, hubs, battery or intake). The two green dots have 60 mm of free height above the drive pods: enough for a flat motor or a servo, not for an upright HD Hex.</figcaption></figure>
+    <div class="tw"><table>
+      <thead><tr><th>Turret drive option</th><th class="n">Turret speed</th><th>Fits the free pocket?</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td><b>REV Core Hex</b>, flat under the side mount</td><td class="n">31 rpm · 188°/s</td><td>Likely. Check its height against 60 mm</td><td>Built-in encoder: 1,152 counts per turret turn. The sim assumed 270°/s, so the real turret is about 30% slower</td></tr>
+        <tr><td><b>AndyMark 5-turn servo</b> (am-5216 or am-5217)</td><td class="n">set by the servo</td><td>Yes, it's the kit's standard drive</td><td>5 turns ÷ 4 = 450° of travel, more than the 347° you need. Frees a motor port</td></tr>
+        <tr><td><b>HD Hex + 3:1 cartridge</b> (as first planned)</td><td class="n">519 rpm</td><td>No, about 100 mm tall</td><td>Far too fast to aim and only 1.2 N·m. It would need about 60:1 of cartridges first</td></tr>
+      </tbody></table></div>
+    <p class="note"><b>Two small parts you'll need either way.</b> The kit's 50-tooth pinion has a 3/8 in. hex bore and REV shafts are 5 mm hex, so add AndyMark's 5 mm to 3/8 in. hex adapter (am-4957). The kit's side mount (am-5012) is drilled for AndyMark NeveRest motors: check its holes against your motor, and CNC a small adapter plate if they don't line up.</p>
+  </section>
+
+  <section id="ideas">
+    <h2>Ideas to fit both balls</h2>
+    <p class="lede">Rule R105 lets the robot grow after the match starts, as long as it stays inside 18 × 24 × 29 in. That's 6 in. (152 mm) longer in one direction and 11 in. taller. All 8 motor ports are used, so anything that moves needs a servo (6 of 8 are free) or a spring.</p>
+    <div class="ideas" id="ideaList"></div>
+  </section>
+
+  <section id="parts">
+    <h2>Real parts and STEP files</h2>
+    <p class="lede">Every bought part on the robot, matched to a real product with the maker's own STEP file. Import a STEP into Onshape with the + button, then Import. Rows marked "confirm" are my best match: check them against what's in your bins.</p>
+    <div class="tw"><table><thead><tr><th>Part</th><th class="n">Qty</th><th>Used for</th><th>Part number</th><th>STEP file</th><th>How sure</th></tr></thead><tbody id="partRows"></tbody></table></div>
+    <h3 style="margin-top:8px">Custom parts (no STEP to download: you make these)</h3>
+    <div class="tw"><table><thead><tr><th>Part</th><th class="n">Qty</th><th>Make by</th><th>Size in the CAD</th></tr></thead><tbody id="customRows"></tbody></table></div>
+    <p class="note"><b>The frame isn't drawn from real channel.</b> In the CAD the chassis frame is 23 custom-shaped bodies, not REV extrusion or channel. Before you cut anything, decide: redraw it with real channel (and add those STEP files here), or commit to CNC plates and treat the frame as custom.</p>
+  </section>
+
+  <section id="where">
+    <h2>Where each part sits</h2>
+    <p class="lede">Centre of each part in millimetres, for placing the STEP files in Onshape. The origin is the robot's centre on the floor. +X is the robot's right, −Y is the front, +Z is up.</p>
+    <div class="tw"><table><thead><tr><th>Part</th><th class="n">X</th><th class="n">Y</th><th class="n">Z</th><th>Which way it points</th></tr></thead><tbody id="whereRows"></tbody></table></div>
+  </section>
+
+  <section>
+    <h2>Sources</h2>
+    <ul class="src">
+      <li><a href="https://ftc-resources.firstinspires.org/ftc/game/cm-html">BIOBUZZ Competition Manual</a>, Team Update 09: R102, R105, R401 to R403, R501 to R503, R601, R603, R702, G407, G416, G417, sections 9.8 and 10.3.1</li>
+      <li><a href="https://andymark.com/am-5470">AndyMark am-5470 product page</a>, its assembly guide, and its STEP file (measured directly)</li>
+      <li>REV Robotics and goBILDA STEP downloads, linked in the parts table</li>
+      <li>Robot sizes: the 51 CAD meshes inside the team's BioBuzz Test Drive sim, split into 400+ separate bodies and measured. Shot and capacity numbers: the sim's physics, run headless</li>
+    </ul>
+  </section>
+</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+// ---------------------------------------------------------------- findings
+const SEV = { must: "Must fix", should: "Should fix", check: "Check" };
+const FINDINGS = [
+  { sev: "must", title: "The CAD's turntable isn't the Robits one, and the real one moves the motor",
+    found: ["CAD: 213 mm ring gear, 12.6 mm pinion, motor 120 mm from the turret's centre.",
+            "Real am-5470: 256.5 mm gear (200 teeth), 66 mm pinion (50 teeth) that must sit 158.75 mm from the centre. 4:1.",
+            "No upright motor fits anywhere on that circle. I checked every 15° against the CAD.",
+            "The CAD's turret stop finger hangs down to 133 mm and sweeps through where the real pinion sits."],
+    why: "If you build the CAD as drawn, the turret motor and pinion won't reach the real gear, and the stop will hit the pinion.",
+    fix: ["Use a flat drive at one of the two free pockets over the drive pods (see Turntable fit).", "Design a new hard stop for the −220° and +127° ends.", "The gear is 2.5 mm wider than its plate, so teeth overhang 1.3 mm per side. Keep wires clear."] },
+  { sev: "must", title: "It carries 2 balls. The rules allow 4, and you start with 4",
+    rule: "G407 · manual 10.3.1",
+    found: ["The path from the lift's mouth to the booster is 185 mm: room for 2 POLLEN (142 mm) or 2 NECTAR (183 mm).", "Each robot is preloaded with 4 POLLEN. In the sim, 2 of them start on the floor in front of the robot."],
+    why: "A HIVE tips at about 8 POLLEN. Carrying 2 means 4 trips for a tip; carrying 4 means 2.",
+    fix: ["Hold 2 more balls in the intake ramp, in front of the lift (see the fold-down intake idea).", "Stop the flaps when the lift is full so the waiting balls aren't crushed."] },
+  { sev: "must", title: "NECTAR doesn't fit through the hood or the booster",
+    found: ["Flywheel to hood: about 60 mm. Booster roller to its pad: 61 mm.", "POLLEN (71 mm) is squeezed about 10 mm in each. Good.", "NECTAR (91 mm) would be squeezed about 30 mm, a third of its width.", "The lift is fine: its sprung wall opens from 61 to 82 mm. The turntable hole (139.7 mm) is fine."],
+    why: "A NECTAR will jam in the turret or stall the booster and flywheel. NECTAR is worth the most in FLOWERS.",
+    fix: ["Let the hood plate and the booster pad open about 20 mm more for NECTAR (see Ideas).", "These gaps come from the CAD's meshes. Measure the real parts before cutting."] },
+  { sev: "must", title: "Balls have to be centred before the turntable hole",
+    found: ["The plate's hole is 139.7 mm. A NECTAR has 24 mm of room on each side, a POLLEN 34 mm.", "The lift's bands are 103 mm deep, so a ball can ride up as much as 36 mm ahead of the turret's centre.", "The sim centres the ball between 138 and 190 mm up, which is inside and above the plate.", "The lift wall's top front corner is 74 mm from the centre, 4 mm outside the hole."],
+    why: "An off-centre ball catches on the plate's edge as it rises, and jams harder when the turret turns.",
+    fix: ["Add a centring funnel that finishes below 120 mm, under the plate.", "End the lift wall below the plate, or notch its corner 5 mm.", "Run a smooth tube, 95 mm inside, through the hole."] },
+  { sev: "must", title: "Robot signs are red only, and the numbers are too small",
+    rule: "R401, R402, R403",
+    found: ["Plates: 178 × 76 mm (7 × 3 in.) on both sides. The size passes (6.5 × 2.5 in. minimum).", "They're drawn red only. You'll play blue too.", "The number blocks are 30 mm tall. The rule asks for white numerals about 57 mm (2.25 in.) tall."],
+    why: "Inspection checks signs on every robot.",
+    fix: ["Make a second set in blue, or a red and blue plate that flips.", "Print 31130 in white, 57 mm tall, with 6 mm of colour around it. It fits the 76 mm plate."] },
+  { sev: "should", title: "Only 3 mm of ground clearance",
+    found: ["The frame and the lift wall's bottom edge are 3.0 mm above the floor. The lift motor is at 6 mm."],
+    why: "Foam tiles sink under the wheels and their seams stick up. Hard parts this low will drag and catch.",
+    fix: ["Raise hard parts to 10 mm or more.", "Keep the lift's mouth low with a flexible lip (thin polycarbonate) instead of a rigid edge."] },
+  { sev: "should", title: "The starting size has almost no margin",
+    rule: "R102",
+    found: ["Width 454 mm = 17.87 in. That leaves 1.6 mm per side.", "Height 446.7 mm = 17.59 in. with the hood at 25°. At 45° it's 16.5 in.; at 65°, 14.9 in."],
+    why: "Screw heads, zip ties and bent plates all count. A robot that's 1 mm over doesn't play.",
+    fix: ["Start every match with the hood at 45° or higher.", "Use button-head screws on the side plates, and test in a sizing box early."] },
+  { sev: "should", title: "No plan for the turret's wires",
+    found: ["The turret turns 347° with no slip ring.", "Five cables go up to it: flywheel motor power and encoder, booster motor, hood servo, Limelight USB.", "The centre of the turntable is the ball path, so cables can't go through the middle."],
+    why: "Wires that wind round a turret get pulled out or cut, usually mid-match.",
+    fix: ["Plan one cable loop above the deck with slack for the full turn, held in a drag chain or spiral wrap.", "Turn the turret end to end 20 times and watch the loop before you drive it."] },
+  { sev: "should", title: "It can't shoot from close, or from the wrong side",
+    found: ["Closer than about 1.2 m (4 ft) from the CELL there's no shot: the hood stops at 65°.", "Shots only work from the side the up CELL opens toward.", "From 4 to 11 ft the flywheel needs 2,300 to 3,400 RPM. It can reach about 5,190, so speed isn't a limit."],
+    why: "Drivers will sit too close and wonder why it won't fire.",
+    fix: ["Mark a shooting line in practice, or have the code rumble the pad when there's no shot.", "If you want closer shots, let the hood reach about 72°."] },
+  { sev: "should", title: "The intake is narrow and off centre",
+    found: ["The opening between the belt cover and the pulley is 149 mm on a 454 mm robot.", "The 4 flap sets span 101 mm and are centred 38 mm to the right of the lift's mouth."],
+    why: "Drivers have to line up on every ball, and balls on the left reach the mouth without a flap pushing them.",
+    fix: ["Centre the flap sets on the lift's mouth, or add a fifth set on the left.", "Add funnel wings (see Ideas)."] },
+  { sev: "should", title: "The drive is slow",
+    found: ["With 5:1 + 4:1 cartridges (18.9:1) and 75 mm wheels, top speed is about 1.25 m/s (4.1 ft/s).", "5:1 + 3:1 gives about 1.6 m/s. 4:1 + 3:1 gives about 2.3 m/s."],
+    why: "With 2 balls per trip, you cross the field a lot.",
+    fix: ["Check which cartridges you really have: the sim guessed.", "Try 4:1 + 3:1 in the Final Build sim (Robot setup, Drive cartridges) before changing hardware."] },
+  { sev: "should", title: "All 8 motor ports are used",
+    rule: "R503",
+    found: ["4 drive, flywheel, turret, lift, booster = 8 motors, the limit. Servos: 2 of 8."],
+    why: "Any new mechanism has to be a servo or a spring.",
+    fix: ["If the turret moves to AndyMark's 5-turn servo, a motor port opens up, for example for a second intake roller."] },
+  { sev: "check", title: "Which motors are the lift and booster?",
+    found: ["The sim's notes say REV Core Hex for both.", "In the CAD both are drawn 36 mm across and 100 mm long, which is the shape of an HD Hex."],
+    why: "The mounts and the space they need are different.",
+    fix: ["Confirm which you're using, then fix the CAD or the parts list to match."] },
+  { sev: "check", title: "Can you swap the battery fast?",
+    found: ["The battery sits between the two hubs, under the turret's overhang, with the odometry pods under it."],
+    why: "You get a few minutes between matches.",
+    fix: ["Make sure it slides out the back with no tools."] },
+  { sev: "check", title: "Weight and tipping",
+    found: ["The robot is 447 mm tall on wheels 336 mm apart. The sim guesses 10 kg. There's no weight limit (R104)."],
+    why: "A tall, heavy turret can tip the robot when it stops hard.",
+    fix: ["Weigh it, keep heavy parts low, and try hard stops with the turret sideways."] },
+  { sev: "check", title: "Sharp edges",
+    rule: "R201",
+    found: ["The lattice side plates and the gear teeth are exposed."],
+    why: "Inspectors run a hand along the robot.",
+    fix: ["Deburr every CNC edge. Add a small guard over the pinion."] },
+];
+const OKS = [
+  ["Starting size", "454 × 440 × 447 mm (17.9 × 17.3 × 17.6 in.) fits the 18 in. cube (R102)."],
+  ["Turret sweep", "The turret's farthest point is 195 mm from its centre and the nearest edge is 204 mm away, so it never leaves the footprint at any angle."],
+  ["Motors and servos", "8 motors and 2 servos. The limit is 8 and 8 (R503). HD Hex and Core Hex are on the legal list (R501)."],
+  ["Limelight 3A", "It's a listed vision coprocessor (R702)."],
+  ["Power", "One battery and one main switch, at the rear right corner (R601, R603)."],
+  ["Flywheel speed", "Needs 2,300 to 3,400 RPM across the field and can reach about 5,190."],
+  ["Lift", "The sprung wall grips both ball sizes (61 to 82 mm)."],
+  ["Turntable height", "The real Robits stack is 23.4 mm tall, the same as the CAD's, so the robot doesn't get taller."],
+];
+(function () {
+  const n = k => FINDINGS.filter(f => f.sev === k).length;
+  $("tally").innerHTML = [["must", n("must"), "must fix before building"], ["should", n("should"), "should fix"], ["check", n("check"), "to check on the real robot"], ["ok", OKS.length, "already pass"]]
+    .map(([k, v, t]) => `<a class="${k}" href="#${k === "ok" ? "passes" : "findings"}"><b>${v}</b><span>${t}</span></a>`).join("");
+  const li = a => a.length > 1 ? `<ul>${a.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : esc(a[0]);
+  $("findList").innerHTML = FINDINGS.map(f => `<article class="find"><header><span class="chip ${f.sev}">${SEV[f.sev]}</span><h3>${esc(f.title)}</h3>${f.rule ? `<span class="rule">${esc(f.rule)}</span>` : ""}</header><dl><dt>Measured</dt><dd>${li(f.found)}</dd><dt>Why</dt><dd>${esc(f.why)}</dd><dt>Fix</dt><dd>${li(f.fix)}</dd></dl></article>`).join("");
+  $("okList").innerHTML = OKS.map(([a, b]) => `<li><b>${esc(a)}.</b> ${esc(b)}</li>`).join("");
+})();
+
+// ---------------------------------------------------------------- ideas
+const IDEAS = [
+  ["Intake", "Floating flap shaft", "Hang the flap shaft on two short pivot arms, pulled down by surgical tubing. It rides low for POLLEN and lifts itself about 10 mm when a NECTAR rolls under. No motor, no code.", "Fixes: NECTAR being 7 mm too tall for the intake."],
+  ["Intake", "Fold-down intake ramp", "Hinge the whole intake so it starts folded up inside 18 in. and drops forward at the start, on a spring with a servo latch. The 152 mm you gain is a ramp that holds 2 more POLLEN in front of the lift.", "Fixes: carrying 2 instead of 4. Uses the 6 in. that R105 allows, and 1 servo."],
+  ["Intake", "Funnel wings", "Two polycarbonate wings on spring hinges at the front of the ramp. They open the mouth from 149 mm to nearly the robot's full width, and fold back if they hit a wall. Width has to stay 18 in., so they open forward, not sideways past the frame.", "Fixes: the narrow, off-centre mouth."],
+  ["Intake", "Softer flaps", "Thinner or softer flaps (35A silicone, or 2 in. compliant wheels) bend round either ball instead of stalling on the big one.", "Helps: the intake bogging down on NECTAR."],
+  ["Turret", "Sprung hood plate", "Hinge the hood's inner plate and hold it in with springs. It rests about 62 mm from the flywheel for POLLEN and is pushed out to about 82 mm by a NECTAR. No servo. NECTAR leaves slower, so give it its own RPM table (the sim already uses separate numbers).", "Fixes: NECTAR jamming in the hood."],
+  ["Turret", "Two-stop hood on a servo", "A small servo moves the hood plate between a POLLEN stop and a NECTAR stop. The operator picks, or a colour sensor in the lift does. More repeatable than springs, so shots are more accurate.", "Fixes: the same jam. Uses 1 of the 6 free servos."],
+  ["Turret", "Sprung booster pad", "Mount the booster's pad on a spring arm, the same way the lift's wall already works: 61 mm at rest, opening to about 82 mm.", "Fixes: NECTAR jamming at the booster."],
+  ["Turret", "Compliant flywheel wheels", "Swap 2 of the 4 traction wheels for soft compliant wheels so the wheel itself gives a few millimetres. Not enough alone for a 20 mm difference, but it makes either hood idea gentler on the ball.", "Helps: grip on both sizes."],
+];
+$("ideaList").innerHTML = IDEAS.map(([tag, t, body, fixes]) => `<article class="idea"><span class="tag">${tag}</span><h3>${esc(t)}</h3><p>${esc(body)}</p><p class="sure">${esc(fixes)}</p></article>`).join("");
+
+// ---------------------------------------------------------------- parts
+const REV = sku => `https://www.revrobotics.com/content/cad/${sku}.STEP`;
+const PARTS = [
+  ["REV HD Hex Motor", 5, "4 drive wheels, flywheel", "REV-41-1291", REV("REV-41-1291"), "From the sim's notes"],
+  ["REV UltraPlanetary Gearbox Kit (3:1, 4:1, 5:1 cartridges)", 5, "On each HD Hex", "REV-41-1600", REV("REV-41-1600"), "From the sim's notes"],
+  ["REV Core Hex Motor", 3, "Lift, booster, turret (proposed)", "REV-41-1300", REV("REV-41-1300"), "Lift and booster from the sim; turret is my proposal. Confirm"],
+  ["REV 75 mm Mecanum Wheel, left", 2, "Drive", "REV-41-1656", REV("REV-41-1656"), "Matches the CAD: 75 mm. Sold as set REV-45-1655"],
+  ["REV 75 mm Mecanum Wheel, right", 2, "Drive", "REV-41-1657", REV("REV-41-1657"), "Matches the CAD"],
+  ["REV Control Hub", 1, "Rear left", "REV-31-1595", REV("REV-31-1595"), "Matches the CAD: 103 × 143 × 30 mm"],
+  ["REV Expansion Hub", 1, "Rear right", "REV-31-1153", REV("REV-31-1153"), "Matches the CAD"],
+  ["REV 12V Slim Battery", 1, "Rear centre", "REV-31-1302", REV("REV-31-1302"), "Confirm which battery you have"],
+  ["REV Switch Cable and Bracket", 1, "Rear right corner", "REV-31-1387", REV("REV-31-1387"), "Confirm"],
+  ["REV Smart Robot Servo V2, Balanced", 2, "Intake (continuous), hood", "REV-41-3334", REV("REV-41-3334"), "Intake from the sim; hood servo type isn't stated. Confirm"],
+  ["goBILDA Swingarm Odometry Pod, 48 mm wheel", 2, "Under the battery", "3110-0001-0001", "https://www.gobilda.com/content/step_files/3110-0001-0001.zip", "Matches the CAD: 43 mm wide"],
+  ["goBILDA Pinpoint Odometry Computer", 1, "Above the strafe pod", "3110-0002-0001", "https://www.gobilda.com/content/step_files/3110-0002-0001.zip", "You told me this one"],
+  ["AndyMark Robits 5.5 in. ID Turntable Assembly", 1, "Turret", "am-5470", "https://documents.andymark.com/aa6f3d33ff4ee295624ef8d11ec31c14b046297c74b4911b2336119686e1fb3f/am-5470%205.5IN%20Robits%20Turntable%20(Base%20Assembly).STEP", "You told me this one. Measured from this file"],
+  ["AndyMark 5 mm hex to 3/8 in. hex adapter", 1, "Pinion on a REV shaft", "am-4957", "", "Needed for a REV motor. STEP is on AndyMark's product page"],
+  ["Limelight 3A", 1, "On the turret", "LL_3A", "", "From the sim. STEP is on Limelight's downloads page"],
+  ["REV 90 mm traction wheel", 4, "Flywheel", "confirm", "", "Size from the CAD (89 mm × 15 mm). Check the number on yours"],
+  ["60-tooth and 24-tooth gears", 1, "Flywheel step-up", "confirm", "", "The sim only gives tooth counts. Tell me the brand"],
+  ["16-tooth pulleys, cord bands, 2.5:1 belt, bearings, shafts, screws", "—", "Lift, intake, everywhere", "confirm", "", "Not separate bodies in the CAD. Needs your real parts"],
+];
+$("partRows").innerHTML = PARTS.map(([p, q, use, sku, url, sure]) => `<tr><td>${esc(p)}</td><td class="n">${q}</td><td>${esc(use)}</td><td><span class="sku">${esc(sku)}</span></td><td>${url ? `<a href="${esc(url)}">STEP</a>` : "—"}</td><td class="sure">${esc(sure)}</td></tr>`).join("");
+const CUSTOM = [
+  ["Lattice side plates", 2, "CNC", "430 × 117 × 6 mm"],
+  ["Turret side plates", 2, "CNC", "about 254 × 197 mm, 6 mm"],
+  ["Flywheel gear plate", 1, "CNC", "83 × 137 × 6 mm"],
+  ["Turret motor adapter plate", 1, "CNC", "about 70 × 58 mm (only if am-5012's holes don't fit your motor)"],
+  ["Robot sign plates, red and blue", 4, "CNC or print", "178 × 76 × 3 mm"],
+  ["Steel flywheel disc", 1, "CNC (lathe)", "76 mm across, 26 to 30 mm wide"],
+  ["Lift wall, pulleys and column", 1, "3D print", "wall 16 × 103 × 145 mm"],
+  ["Funnel guides", 2, "3D print", "60 mm tall"],
+  ["Turret drum and inner plates", 1, "3D print", "230 × 146 × 225 mm overall"],
+  ["Hood and hood arms", 1, "3D print", "124 mm wide"],
+  ["Flap hubs and flaps", 4, "3D print (TPU flaps)", "88 mm tip to tip"],
+  ["Booster pad, Limelight mount, motor mounts", "—", "3D print", "see the CAD"],
+  ["Chassis frame", "—", "Decide: real channel or CNC", "23 custom bodies in the CAD"],
+];
+$("customRows").innerHTML = CUSTOM.map(([p, q, how, size]) => `<tr><td>${esc(p)}</td><td class="n">${q}</td><td>${esc(how)}</td><td>${esc(size)}</td></tr>`).join("");
+const WHERE = [
+  ["Mecanum wheels (4)", "±168", "±176", "37.5", "Axles along X"],
+  ["Control Hub", -113, 125, 87, "Flat, long side front to back"],
+  ["Expansion Hub", 113, 125, 87, "Flat, long side front to back"],
+  ["Battery", 0, 124, 82, "Flat, between the hubs"],
+  ["Forward odometry pod", -20, 139, 22, "Wheel rolls front to back"],
+  ["Strafe odometry pod", 52, 145, 22, "Wheel rolls side to side"],
+  ["Pinpoint", 52, 145, 54, "Flat, above the strafe pod"],
+  ["Power switch", 196, 190, 106, "Facing the rear"],
+  ["Intake flap shaft", "−68 to 121", -199, 88, "Along X"],
+  ["Lift motor", -97, -53, 56, "Upright"],
+  ["Turntable plate (top face)", 0, -21, 130, "Flat. This is also the turret's axis"],
+  ["Turret pinion (proposed)", 153, -62, 147, "Shaft straight up"],
+  ["Flywheel axle", "98 from the axis", "along the turret's width", 298, "Turns with the turret"],
+  ["Booster roller axle", "−33 from the axis", "along the turret's width", 205, "Turns with the turret"],
+  ["Limelight 3A lens", "176 from the axis", "on the turret's centre line", 292, "Tilted up 25°"],
+];
+$("whereRows").innerHTML = WHERE.map(r => `<tr><td>${esc(r[0])}</td><td class="n">${esc(r[1])}</td><td class="n">${esc(r[2])}</td><td class="n">${esc(r[3])}</td><td>${esc(r[4])}</td></tr>`).join("");
+
+// ---------------------------------------------------------------- drawings, to scale (1 unit = 1 mm before scaling)
+function sheet(id, w, h, k, label, draw) {
+  const o = [];
+  const api = {
+    rect: (x, y, ww, hh, c, rx = 0) => o.push(`<rect x="${x * k}" y="${y * k}" width="${ww * k}" height="${hh * k}" rx="${rx}" class="${c}"/>`),
+    circ: (x, y, r, c) => o.push(`<circle cx="${x * k}" cy="${y * k}" r="${r * k}" class="${c}"/>`),
+    line: (x1, y1, x2, y2, c = "s-line", sw = 1.5) => o.push(`<line x1="${x1 * k}" y1="${y1 * k}" x2="${x2 * k}" y2="${y2 * k}" class="${c}" stroke-width="${sw}"/>`),
+    path: (d, c, sw = 1.5) => o.push(`<path d="${d}" class="${c}" stroke-width="${sw}"/>`),
+    text: (x, y, s, c = "t", anchor = "start") => o.push(`<text x="${x * k}" y="${y * k}" class="${c}" text-anchor="${anchor}">${esc(s)}</text>`),
+    arrow: (x1, y1, x2, y2) => { const a = Math.atan2(y2 - y1, x2 - x1), L = 7 / k, p = (da) => `${(x2 - L * Math.cos(a + da)) * k},${(y2 - L * Math.sin(a + da)) * k}`; o.push(`<line x1="${x1 * k}" y1="${y1 * k}" x2="${x2 * k}" y2="${y2 * k}" class="s-line" stroke-width="2"/><polygon points="${x2 * k},${y2 * k} ${p(0.45)} ${p(-0.45)}" fill="currentColor"/>`); },
+    k,
+  };
+  draw(api);
+  $(id).innerHTML = `<svg viewBox="0 0 ${w * k} ${h * k}" style="max-width:${w * k}px;min-width:${Math.min(520, w * k)}px" role="img" aria-label="${esc(label)}">${o.join("")}</svg>`;
+}
+const RP = 35.55, RN = 45.7;
+
+// 1. intake from the side. screen x = y + 335 (front at the left), screen y = 195 - z
+sheet("figA", 470, 220, 1.9, "Side view of the intake: a ball rolls under the flap shaft, through the funnel and into the lift", g => {
+  const X = y => y + 335, Y = z => 195 - z;
+  g.line(0, Y(0), 470, Y(0), "s-line", 2); g.text(6, Y(0) + 15, "floor", "t-m");
+  g.rect(X(-148), Y(130), 254, 5.6, "f-plate");
+  g.rect(X(-78), Y(148), 103, 145, "f-part");
+  g.rect(X(-34), Y(150), 6.3, 140, "f-band"); g.rect(X(-24), Y(150), 6.3, 140, "f-band"); g.rect(X(-14), Y(150), 6.3, 140, "f-band");
+  g.circ(X(-199), Y(88.4), 44.2, "s-dash");
+  g.line(X(-199) - 44.2, Y(88.4), X(-199) + 44.2, Y(88.4), "s-thin", 3); g.line(X(-199), Y(88.4) - 44.2, X(-199), Y(88.4) + 44.2, "s-thin", 3); g.circ(X(-199), Y(88.4), 4, "f-dark");
+  g.circ(X(-285), Y(RN), RN, "f-nectar"); g.circ(X(-285), Y(RP), RP, "f-pollen");
+  g.circ(X(-140), Y(RP), RP, "f-pollen"); g.circ(X(-30), Y(78), RP, "f-pollen");
+  g.arrow(X(-246), Y(16), X(-206), Y(16)); g.arrow(X(-102), Y(16), X(-80), Y(16)); g.arrow(X(-30), Y(118), X(-30), Y(170));
+  g.line(X(-199), Y(84.4), X(-199), Y(0), "s-thin", 1); g.text(X(-195), Y(52), "84 mm", "t");
+  g.text(X(-199), Y(140), "flaps, 88 mm across", "t", "middle");
+  g.text(X(-285), Y(101), "NECTAR: 7 mm too tall", "t-bad", "middle");
+  g.text(X(-84), Y(86), "lift mouth", "t-m", "end"); g.line(X(-77), Y(0), X(-77), Y(80), "s-dash", 1.5);
+  g.text(X(34), Y(60), "lift bands", "t"); g.text(X(34), Y(140), "turntable plate", "t-m");
+  g.text(X(-325), 12, "FRONT", "t-m"); g.text(X(128), 12, "REAR", "t-m", "end");
+});
+
+// 2. lift and turntable from the front. screen x = x + 150, screen y = 250 - z
+sheet("figB", 330, 262, 2.1, "Front view of the lift: bands on the left, sprung wall on the right, then up through the turntable hole", g => {
+  const X = x => x + 150, Y = z => 250 - z;
+  g.line(0, Y(0), 330, Y(0), "s-line", 2);
+  g.rect(X(-127), Y(130), 57.15, 5.59, "f-plate"); g.rect(X(69.85), Y(130), 57.15, 5.59, "f-plate");
+  g.rect(X(-86.5), Y(140), 14, 10, "f-part"); g.rect(X(72.5), Y(140), 14, 10, "f-part");
+  g.rect(X(-101.5), Y(140), 14, 10, "f-part"); g.rect(X(87.5), Y(140), 14, 10, "f-part");
+  g.rect(X(-128.3), Y(153.4), 39.8, 13.4, "f-dark"); g.rect(X(88.5), Y(153.4), 39.8, 13.4, "f-dark");
+  g.rect(X(-54.4), Y(150.3), 24.7, 140.6, "f-band");
+  g.rect(X(31.4), Y(148), 16, 145, "f-part"); g.rect(X(52.3), Y(118), 16, 115, "f-none s-dash");
+  g.circ(X(10), Y(58), RN, "f-nectar"); g.circ(X(1.2), Y(58), RP, "f-pollen");
+  g.arrow(X(1.2), Y(100), X(1.2), Y(160));
+  g.circ(X(0), Y(205), RP, "f-pollen");
+  g.line(X(-69.85), Y(124), X(69.85), Y(124), "s-thin", 1);
+  g.text(X(-60), Y(70), "bands", "t", "end");
+  g.text(X(76), Y(84), "sprung wall:", "t"); g.text(X(76), Y(70), "61 mm, opens to 82", "t-m");
+  g.text(X(134), Y(120), "139.7 mm hole", "t"); g.text(X(134), Y(143), "bearing", "t-m"); g.text(X(134), Y(158), "200T gear", "t-m");
+  g.text(X(44), Y(201), "centred, into the turret", "t");
+  g.text(X(-146), Y(-2) + 12, "robot's left", "t-m"); g.text(X(176), Y(-2) + 12, "robot's right", "t-m", "end");
+});
+
+// 3. turret from the side, facing right. screen x = x + 150, screen y = 470 - z
+sheet("figC", 400, 350, 1.75, "Side view of the turret: booster roller and pad, flywheel and hood", g => {
+  const X = x => x + 150, Y = z => 470 - z, ax = 98, az = 298;
+  g.rect(X(-127), Y(130), 254, 5.59, "f-plate"); g.rect(X(-128.3), Y(153.4), 256.6, 13.4, "f-dark"); g.text(X(134), Y(140), "turntable", "t-m");
+  g.circ(X(-33), Y(205), 20, "f-part"); g.text(X(-58), Y(205) + 4, "booster roller", "t", "end");
+  g.rect(X(48), Y(222), 46, 34, "f-part"); g.text(X(98), Y(196), "pad", "t");
+  g.circ(X(17.5), Y(205), RP, "f-pollen");
+  g.line(X(-13), Y(246), X(48), Y(246), "s-thin", 1); g.text(X(17.5), Y(250), "61 mm", "t", "middle");
+  g.circ(X(ax), Y(az), 45, "f-dark"); g.text(X(ax), Y(az) + 4, "flywheel", "t", "middle");
+  // hood: inner face about 105 mm from the flywheel's axle, drawn at 45 degrees
+  const arc = (r, a0, a1) => { const p = a => `${X(ax + r * Math.cos(a)) * g.k},${Y(az + r * Math.sin(a)) * g.k}`; return `M ${p(a0)} A ${r * g.k} ${r * g.k} 0 0 0 ${p(a1)}`; };
+  g.path(arc(105, 1.05, 3.5), "s-line", 5); g.text(X(ax - 118), Y(az + 62), "hood", "t", "end");
+  const bc = (r, a) => [ax + r * Math.cos(a), az + r * Math.sin(a)], pp = bc(45 + 30, 2.35), pn = bc(45 + 30, 2.35);
+  g.circ(X(pn[0]), Y(pn[1]), RN, "f-nectar"); g.circ(X(pp[0]), Y(pp[1]), RP, "f-pollen");
+  g.text(X(pp[0] - 60), Y(pp[1] + 70), "60 mm gap: NECTAR", "t-bad", "end"); g.text(X(pp[0] - 60), Y(pp[1] + 56), "doesn't fit", "t-bad", "end");
+  g.arrow(X(17.5), Y(246), X(30), Y(300));
+  const e = bc(75, 1.25); g.arrow(X(e[0]), Y(e[1]), X(e[0] + 70), Y(e[1] + 62)); g.text(X(e[0] + 74), Y(e[1] + 66), "shot", "t");
+  g.rect(X(153), Y(313), 35.6, 50.7, "f-part"); g.text(X(171), Y(256), "Limelight", "t", "middle");
+  g.text(X(-140), Y(450), "turret's back", "t-m"); g.text(X(240), Y(450), "turret's front", "t-m", "end");
+});
+
+// 4. turntable fit from above. screen x = x + 250, screen y = y + 245 (front at the top)
+sheet("figD", 500, 490, 1.6, "Top view of the robot with the Robits turntable: only two places on the pinion circle are free", g => {
+  const X = x => x + 250, Y = y => y + 245, cy = -21;
+  g.rect(X(-227), Y(-225), 454, 450, "f-none s-line", 4);
+  g.rect(X(-227), Y(-225), 105.5, 450, "f-part"); g.rect(X(121.5), Y(-225), 105.5, 450, "f-part");
+  g.text(X(-174), Y(-196), "drive pod", "t-m", "middle"); g.text(X(174), Y(-196), "drive pod", "t-m", "middle");
+  g.rect(X(-164), Y(53), 102, 143, "f-part", 3); g.text(X(-113), Y(128), "Control Hub", "t-m", "middle");
+  g.rect(X(62), Y(53), 103, 143, "f-part", 3); g.text(X(113), Y(128), "Expansion Hub", "t-m", "middle");
+  g.rect(X(-45), Y(50), 90, 147, "f-part", 3); g.text(X(0), Y(128), "battery", "t-m", "middle");
+  g.line(X(-68), Y(-199), X(121), Y(-199), "s-line", 5); g.text(X(26), Y(-207), "intake flap shaft", "t-m", "middle");
+  g.rect(X(-127), Y(cy - 127), 254, 254, "f-none s-line", 3);
+  g.circ(X(0), Y(cy), 128.27, "f-dark"); g.circ(X(0), Y(cy), 101.5, "f-part"); g.circ(X(0), Y(cy), 72.5, "f-part"); g.circ(X(0), Y(cy), 69.85, "f-none s-line");
+  g.text(X(0), Y(cy) + 4, "139.7 mm hole", "t", "middle"); g.text(X(0), Y(cy - 108), "200T gear, 256.5 mm", "t-m", "middle");
+  g.circ(X(0), Y(cy), 158.75, "s-dash");
+  for (let th = 0; th < 360; th += 15) { const a = th * Math.PI / 180, x = 158.75 * Math.cos(a), y = cy + 158.75 * Math.sin(a), ok = th === 195 || th === 345; g.circ(X(x), Y(y), ok ? 9 : 5, ok ? "f-good" : "f-bad"); }
+  g.circ(X(153.3), Y(-62.1), 33, "f-none s-line"); g.text(X(153), Y(-102), "50T pinion here", "t-good", "middle"); g.text(X(-153), Y(-80), "or here", "t-good", "middle");
+  g.line(X(-93), Y(-114), X(-77), Y(-98), "s-line", 2); g.line(X(-93), Y(-98), X(-77), Y(-114), "s-line", 2); g.text(X(-70), Y(-112), "CAD's old motor", "t-m");
+  g.text(X(0), Y(-232), "FRONT", "t-m", "middle"); g.text(X(0), Y(240), "REAR", "t-m", "middle");
+});
+</script>

@@ -52,6 +52,7 @@ button.primary { background: var(--ink); color: var(--sheet); border-color: var(
 .eyebrow { font: 600 12px var(--body); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
 h1 { font: 900 clamp(30px, 5vw, 46px)/1 var(--disp); margin: 4px 0 0; letter-spacing: -.01em; text-wrap: balance; }
 h1 .hex { color: var(--honey); }
+.links { margin: 8px 0 0; font-size: 14px; color: var(--muted); max-width: 62ch; } .links a { color: var(--ink); font-weight: 600; }
 .meter { flex: 0 1 340px; min-width: 220px; display: grid; gap: 6px; }
 .meter b { font: 800 22px var(--disp); font-variant-numeric: tabular-nums; }
 .meter small { color: var(--muted); font-size: 13px; }
@@ -151,6 +152,7 @@ label.check input:disabled { opacity: .5; }
     <div class="brand">
       <div class="eyebrow">Team 31130 · Rose City League · 2026-27 BioBuzz</div>
       <h1>BioBuzz <span class="hex">Build Book</span></h1>
+      <p class="links">Before you cut anything, read the <a href="https://claude.ai/artifact/HtVqgeSpsn3mLcW48VT9JT">Design Review</a>. To drive the finished robot and watch balls go through it, open the <a href="https://claude.ai/artifact/Xb9AfAQjssNirSPoWULm61">Final Build sim</a>.</p>
     </div>
     <div class="meter" aria-live="polite">
       <div><b id="mDone">0</b> <span>of <span id="mTotal">0</span> boxes checked</span></div>
@@ -193,11 +195,11 @@ const STEPS = [
         ["p-frame", "Chassis channel, plates, spacers and screws for a 454 × 450 mm frame"],
         ["p-hubs", "Control Hub and Expansion Hub (8 motors needs both hubs)"],
         ["p-power", "12 V battery, power switch, and a charged spare battery"],
-        ["p-odo", "2 goBILDA odometry pods and the goBILDA Pinpoint"],
+        ["p-odo", "2 goBILDA Swingarm Odometry Pods (48 mm wheel, 3110-0001-0001) and the goBILDA Pinpoint (3110-0002-0001)"],
         ["p-intake", "Intake: flap shaft, 4 flap sets, a continuous servo and a 2.5:1 belt"],
         ["p-lift", "Lift: Core Hex motor, cord bands and two 16-tooth pulleys"],
         ["p-booster", "Booster: Core Hex motor and a 40 mm roller"],
-        ["p-turret", "Turret: turntable bearing and the hex motor with its 3:1 gearbox"],
+        ["p-turret", "Turret: AndyMark Robits 5.5 in. ID Turntable (am-5470), a 5 mm to 3/8 in. hex adapter (am-4957), and a flat motor (REV Core Hex) or AndyMark 5-turn servo to drive it"],
         ["p-fly", "Flywheel: HD Hex with a 3:1 cartridge, 60T and 24T step-up, 90 mm wheel (steel disc plus 4 traction wheels)"],
         ["p-hood", "Hood: hood plates and one servo"],
         ["p-ll", "Limelight 3A and its USB cable"],
@@ -207,7 +209,7 @@ const STEPS = [
         ["q-print", "Every 3D-printed part printed (the white and navy parts in the sim)"],
         ["q-tools", "Hex keys, wrenches, zip ties and a tape measure on the table"],
         ["q-old", "Old robot taken apart and its parts sorted"],
-        ["q-sizing", "18 in sizing box or tape outline ready. The sim robot is 17.9 × 17.7 in, so it's a tight fit"],
+        ["q-sizing", "18 in sizing box or tape outline ready. The robot is 17.9 in wide and 17.6 in tall with the hood down, so it's a tight fit"],
         ["q-names", "One person owns the Robot Configuration names and writes them down at each step"],
       ]},
     ],
@@ -233,12 +235,14 @@ const STEPS = [
           "Connect the Expansion Hub to the Control Hub with the RS485 cable."],
     cfg: [["Control Hub", "Drive motors 0–3"], ["Expansion Hub 2", "Turret, flywheel, lift, booster; servos for the intake and hood"]],
     items: [["s3-mount", "Both hubs mounted, every port still reachable"], ["s3-batt", "Battery strapped down"], ["s3-switch", "Power switch reachable from outside the robot"], ["s3-link", "Expansion Hub connected to the Control Hub"]] },
-  { id: "step-4", title: "Odometry pods", no3d: "The odometry pods aren't in the sim's 3D model, so where they go is up to you.",
-    parts: [["2", "goBILDA odometry pods"], ["1", "goBILDA Pinpoint"]],
-    how: ["Mount one pod facing forward (it measures forward and back) and one sideways (it measures strafing).",
+  { id: "step-4", title: "Odometry pods",
+    parts: [["2", "goBILDA Swingarm Odometry Pods, 48 mm wheel"], ["1", "goBILDA Pinpoint"]],
+    how: ["Both pods go at the back, under the battery.",
+          "Forward pod (measures forward and back): 20 mm left of the robot's center and 139 mm behind it.",
+          "Strafe pod (measures side to side): 52 mm right of center and 145 mm behind it.",
           "Both pods should spring down flat onto the tiles.",
-          "Mount the Pinpoint near the middle and plug it into an I2C port on the Control Hub.",
-          "Measure how far each pod is from the robot's center, in mm, and write it down. Pedro Pathing needs these numbers."],
+          "Mount the Pinpoint above the strafe pod and plug it into an I2C port on the Control Hub.",
+          "Measure where your pods really ended up, in mm, and write it down. Pedro Pathing needs these numbers."],
     cfg: [["pinpoint", "goBILDA Pinpoint Odometry Computer (I2C)"]],
     items: [["s4-tiles", "Both pods press flat on the tiles"], ["s4-offsets", "Pod offsets measured and written down"], ["s4-i2c", "Pinpoint plugged into an I2C port"]] },
   { id: "step-5", title: "Intake",
@@ -256,17 +260,23 @@ const STEPS = [
     cfg: [["lift", "REV Core Hex Motor"]],
     items: [["s6-tension", "Bands tight, no slipping on the pulleys"], ["s6-ball", "A POLLEN pushed by hand rides up the column"], ["s6-two", "Two POLLEN fit in the lift"]] },
   { id: "step-7", title: "Deck and turntable",
-    parts: [["1", "Top deck plate"], ["1", "Turntable bearing"], ["1", "Center hub"]],
-    how: ["Mount the deck over the electronics.",
-          "Center the turntable over the lift column. In the sim the turret's center is 21 mm in front of the robot's center."],
-    items: [["s7-spin", "Turntable spins freely all the way around"], ["s7-center", "Turntable is centered over the lift column"]] },
+    parts: [["1", "Robits mounting plate, 254 mm square (am-5040). This is the deck"], ["1", "Robits turntable bearing, 145 mm inside, 203 mm outside (am-5039)"], ["1", "Robits 200-tooth turntable gear (am-5038)"], ["4", "10-32 × 0.75 in flat head screws, for the gear"], ["4", "10-32 × 1 in flat head screws, for the plate"], ["8", "10-32 nylock nuts"], ["1", "Center hub"]],
+    how: ["Bolt the gear to the bearing's outer ring: 4 of the 0.75 in flat head screws up through the ring, nuts on top of the gear.",
+          "Bolt the bearing's inner ring to the plate: 4 of the 1 in flat head screws down through the ring and the plate, nuts underneath.",
+          "Mount the plate as the deck, with its top face 130 mm above the floor.",
+          "Center it over the lift column: the turret's center is 21 mm in front of the robot's center.",
+          "The hole in the plate is 139.7 mm. Balls have to be centered before they reach it, so fit a funnel or tube under the plate."],
+    items: [["s7-spin", "Turntable spins freely all the way around"], ["s7-center", "Turntable is centered over the lift column"], ["s7-ball", "A NECTAR pushed up the lift by hand passes through the hole without catching"]] },
   { id: "step-8", title: "Turret drive",
-    parts: [["1", "Hex motor with 3:1 gearbox"], ["1", "Motor mount"]],
-    how: ["Mount the turret motor under the deck so it drives the turntable.",
-          "The turret turns from −220° to +127° (347° in all), so it can't spin all the way around. Leave cable slack for that range.",
+    parts: [["1", "Robits 50-tooth pinion (am-5020_50, in the turntable kit)"], ["1", "Robits side motor mount (am-5012, in the kit)"], ["1", "5 mm to 3/8 in. hex adapter (am-4957)"], ["1", "Flat motor (REV Core Hex) or AndyMark 5-turn servo"]],
+    how: ["The pinion has to sit 158.75 mm from the turret's center. With the 200-tooth gear that's 4:1.",
+          "Put it over the right drive pod, 41 mm ahead of the turret's center. That pocket and the matching one on the left are the only places with room: 60 mm of height.",
+          "An upright HD Hex doesn't fit there. Use a flat motor or a servo, hung under the side mount.",
+          "The pinion's bore is 3/8 in. hex and REV shafts are 5 mm hex, so use the adapter.",
+          "The turret turns from −220° to +127° (347° in all). Add a hard stop at each end, clear of the pinion, and leave cable slack for that range.",
           "Mark the zero position, with the turret facing forward."],
-    cfg: [["turret", "Motor, encoder in the same port number"]],
-    items: [["s8-drive", "Motor turns the turret without slipping"], ["s8-enc", "Encoder cable in the same port number as the motor"], ["s8-zero", "Zero mark drawn with the turret facing forward"], ["s8-slack", "Cables have slack for the full turn range"]] },
+    cfg: [["turret", "Motor or servo; a motor's encoder goes in the same port number"]],
+    items: [["s8-drive", "Motor turns the turret without slipping"], ["s8-enc", "Encoder cable in the same port number as the motor"], ["s8-zero", "Zero mark drawn with the turret facing forward"], ["s8-slack", "Cables have slack for the full turn range"], ["s8-stop", "Hard stops fitted at both ends of the turn, clear of the pinion"]] },
   { id: "step-9", title: "Turret body",
     parts: [["1", "Turret drum"], ["2", "Side plates"], ["·", "Printed parts"]],
     how: ["Build the turret drum and side plates on the turntable.",
@@ -276,15 +286,17 @@ const STEPS = [
     parts: [["1", "HD Hex with 3:1 cartridge"], ["1", "60T and 24T step-up"], ["1", "90 mm flywheel"], ["1", "Booster: Core Hex and 40 mm roller"]],
     how: ["Gear the flywheel 3:1 down, then 60T to 24T up. In the sim that tops out near 5100 RPM at the wheel.",
           "The wheel is a 76 mm steel disc with 4 traction wheels; keep it balanced.",
-          "Mount the booster roller so it presses the top ball into the flywheel. It only runs while firing."],
+          "Mount the booster roller so it presses the top ball into the flywheel. It only runs while firing.",
+          "The gap from the booster roller to its pad is 61 mm, sized for POLLEN. Put the pad on a spring arm that opens to about 82 mm so NECTAR fits too."],
     cfg: [["flywheel", "REV HD Hex Motor, encoder in the same port number"], ["booster", "REV Core Hex Motor"]],
     items: [["s10-true", "Flywheel spins true, no wobble or rubbing"], ["s10-belt", "Gears or belt tight"], ["s10-enc", "Flywheel encoder in the same port number as its motor"], ["s10-boost", "Booster roller touches the top ball"]] },
   { id: "step-11", title: "Hood",
     parts: [["1", "Hood plates"], ["1", "Servo"]],
     how: ["Center the servo before you attach the horn.",
-          "The hood sets the shot angle from 25° to 65°."],
+          "The hood sets the shot angle from 25° to 65°.",
+          "The gap from the flywheel to the hood is about 60 mm, sized for POLLEN. Let the hood plate open about 20 mm more for NECTAR, on springs or a second servo."],
     cfg: [["hood", "Servo"]],
-    items: [["s11-center", "Servo centered before the horn went on"], ["s11-range", "Hood moves from 25° to 65° without binding"]] },
+    items: [["s11-center", "Servo centered before the horn went on"], ["s11-range", "Hood moves from 25° to 65° without binding"], ["s11-nectar", "A NECTAR pushed through by hand passes the hood without jamming"]] },
   { id: "step-12", title: "Limelight 3A",
     parts: [["1", "Limelight 3A"], ["1", "USB cable"]],
     how: ["Mount it on the turret, 176 mm ahead of the turret's center, tilted up 25°.",
@@ -295,8 +307,9 @@ const STEPS = [
   { id: "step-13", title: "Wire up and configure", no3d: "No new parts: this step is wiring, setup and checks.",
     how: ["Enter every name from steps 2 to 12 in the Robot Configuration on the Driver Hub, and save it.",
           "Tie down every wire, away from the wheels, flywheel and turret.",
-          "Fit the robot in the sizing box, and weigh it."],
-    items: [["s13-config", "Every name saved in the Robot Configuration"], ["s13-wires", "Wires tied down, nothing near the wheels, flywheel or turret"], ["s13-size", "Robot fits the 18 in sizing box"], ["s13-weigh", "Robot weighed (the sim guesses 10 kg)"], ["s13-claude", "Configuration names sent to Claude for the new TeleOp"]] },
+          "Fit the robot in the sizing box with the hood at 45° or higher, and weigh it.",
+          "Fit the robot signs: red and blue, on two sides, with 31130 in white numbers about 57 mm tall."],
+    items: [["s13-config", "Every name saved in the Robot Configuration"], ["s13-wires", "Wires tied down, nothing near the wheels, flywheel or turret"], ["s13-size", "Robot fits the 18 in sizing box with the hood at 45° or higher"], ["s13-signs", "Red and blue robot signs made, with 57 mm white numbers"], ["s13-weigh", "Robot weighed (the sim guesses 10 kg)"], ["s13-claude", "Configuration names sent to Claude for the new TeleOp"]] },
 ];
 STEPS.forEach((s, i) => { s.index = i; s.all = s.groups ? s.groups.flatMap(g => g.items) : s.items; });
 const ALL_IDS = STEPS.flatMap(s => s.all.map(it => it[0]));
@@ -466,10 +479,46 @@ const viewer = (() => {
     for (let i = 0; i < a.length; i++) f[i] = q.o[i % 3] + a[i] * q.s[i % 3];
     const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.BufferAttribute(f, 3)); geo.computeVertexNormals(); return geo;
   }
+  // ---- AndyMark Robits 5.5 in. ID Turntable (am-5470), drawn to the sizes in AndyMark's own STEP file (mm).
+  // z = 0 is the top of the mounting plate (130 mm above the floor); the turret axis is the origin.
+  // fixed: the plate, the inner race, the 50T pinion, its bracket and a flat drive motor. spin: the outer race and the 200T gear.
+  // The pinion sits 158.75 mm from the axis (4:1). pin = [x, y] of the pinion in this frame.
+  function robitsTurntable(fixed, spin, mk, pin) {
+    const out = [];
+    const put = (geo, m, par, x = 0, y = 0, z = 0) => { const g = new THREE.Mesh(geo, m); g.position.set(x, y, z); g.castShadow = true; par.add(g); out.push(g); return g; };
+    const circle = (r, cx = 0, cy = 0) => { const p = new THREE.Path(); p.absarc(cx, cy, r, 0, Math.PI * 2, true); return p; };
+    const ext = (s, h, seg = 64) => new THREE.ExtrudeGeometry(s, { depth: h, bevelEnabled: false, curveSegments: seg });
+    const ring = (ro, ri, h) => { const s = new THREE.Shape(); s.absarc(0, 0, ro, 0, Math.PI * 2, false); s.holes.push(circle(ri)); return ext(s, h); };
+    const gear = (teeth, tip, root, bore, h) => {
+      const s = new THREE.Shape(), st = Math.PI * 2 / teeth;
+      for (let i = 0; i < teeth; i++) for (const [r, t] of [[root, 0], [root, 0.18], [tip, 0.36], [tip, 0.64], [root, 0.82]]) { const a = (i + t) * st, x = r * Math.cos(a), y = r * Math.sin(a); if (i === 0 && t === 0) s.moveTo(x, y); else s.lineTo(x, y); }
+      s.closePath(); s.holes.push(circle(bore)); return ext(s, h, 48);
+    };
+    const alu = mk("#c3c8cf", { metalness: 0.55, roughness: 0.38 }), race = mk("#9ea5ad", { metalness: 0.6, roughness: 0.35 }), black = mk("#22252a", { roughness: 0.7 }), grey = mk("#aab0b8", { roughness: 0.6 }), motor = mk("#2f3238", { roughness: 0.55 });
+    // am-5040 mounting plate: 254 x 254 x 5.59, 139.7 centre hole, #10 holes every 12.7 mm round the edge
+    const ps = new THREE.Shape(); ps.moveTo(-127, -127); ps.lineTo(127, -127); ps.lineTo(127, 127); ps.lineTo(-127, 127); ps.closePath(); ps.holes.push(circle(69.85));
+    for (let i = -9; i <= 9; i++) for (const [x, y] of [[i * 12.7, -120.65], [i * 12.7, 120.65], [-120.65, i * 12.7], [120.65, i * 12.7]]) if (Math.abs(i) < 9 || y === -120.65 || y === 120.65) ps.holes.push(circle(2.55, x, y));
+    put(ext(ps, 5.59, 20), alu, fixed, 0, 0, -5.59);
+    // am-5039 bearing: inner race 145 to 173, outer race 175 to 203, both 10 tall
+    put(ring(86.5, 72.5, 10), race, fixed);
+    put(ring(101.5, 87.5, 10), race, spin);
+    // am-5038 turntable gear: 200 teeth, 20 DP, 256.54 over the tips, 250.86 at the roots, 13.4 tall, on the outer race
+    put(gear(200, 128.27, 125.43, 88.5, 13.4), black, spin, 0, 0, 10);
+    if (pin) {
+      const [px, py] = pin, a = Math.atan2(py, px);
+      // am-5020_50 pinion: 50 teeth, 66 over the tips, 12.7 wide, 3/8 in hex bore
+      const g = put(gear(50, 33.02, 30.2, 4.8, 12.7), grey, fixed, px, py, 10.35); g.rotation.z = a + Math.PI / 50;
+      // am-5012 side motor mount under the plate edge, then a flat right-angle motor (REV Core Hex size, a stand-in) and its shaft
+      const br = put(new THREE.BoxGeometry(70, 58, 3.2), alu, fixed, px - 14 * Math.cos(a), py - 14 * Math.sin(a), -7.2); br.rotation.z = a;
+      const mo = put(new THREE.BoxGeometry(72, 55, 47), motor, fixed, px + 6 * Math.cos(a), py + 6 * Math.sin(a), -32.4); mo.rotation.z = a + Math.PI / 2;
+      const sh = put(new THREE.CylinderGeometry(2.6, 2.6, 38, 6), race, fixed, px, py, 6); sh.rotation.x = Math.PI / 2;
+    }
+    return out;
+  }
   function apply() {
     if (!ready) return;
     meshes.forEach((m, i) => {
-      const st = MESH_STEP[i], mat = m.material;
+      const st = m.userData.step, mat = m.material;
       const finished = step === 0 || step === STEPS.length - 1;
       const built = finished || st <= step, isNew = !finished && st === step;
       m.visible = built || ghost;
@@ -514,10 +563,22 @@ const viewer = (() => {
       G.roller.position.set(0, data.rollerAxis[0], data.rollerAxis[1]);
       G.turret.rotation.z = -Math.PI / 2;            // turret facing the front, as in the sim
       G.hood.rotation.y = -(45 - 25) * Math.PI / 180; // hood at 45°
-      for (const q of data.meshes) {
-        const mat = new THREE.MeshStandardMaterial({ color: new THREE.Color(q.color), metalness: 0.2, roughness: 0.6, side: THREE.DoubleSide });
-        const m = new THREE.Mesh(unpack(q.m), mat); m.userData.base = mat.color.clone(); G[q.group].add(m); meshes.push(m);
-      }
+      const mk = (color, o = {}) => new THREE.MeshStandardMaterial(Object.assign({ color: new THREE.Color(color), metalness: 0.2, roughness: 0.6, side: THREE.DoubleSide }, o));
+      const track = (m, st) => { m.userData.base = m.material.color.clone(); m.userData.step = st; meshes.push(m); return m; };
+      const part = (p, a, b) => { const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.BufferAttribute(p, 3)); g.computeVertexNormals(); return g; };
+      // The CAD's generic turntable comes out: 26 deck plate, 27 ring, 28 motor mount and stop post, 44/45 turret motor, 49 pinion.
+      const DROP = new Set([26, 27, 28, 44, 45, 49]);
+      data.meshes.forEach((q, i) => {
+        if (DROP.has(i)) return;
+        const geo = unpack(q.m), p = geo.attributes.position.array, add = (g, st) => { const m = new THREE.Mesh(g, mk(q.color)); G[q.group].add(m); track(m, st); };
+        if (i === 17) { add(part(p.slice(0, 10199 * 9)), 3); add(part(p.slice(10199 * 9)), 4); return; }   // the Expansion Hub, then the odometry pods and Pinpoint
+        if (i === 30) { add(part(p.slice(6584 * 9)), MESH_STEP[i]); return; }                                // without the generic 213 mm gear
+        if (i === 31) { const keep = new Float32Array(p.length - 370 * 9); keep.set(p.subarray(0, 5984 * 9)); keep.set(p.subarray(6354 * 9), 5984 * 9); add(part(keep), MESH_STEP[i]); return; } // without the stop finger that would hit the real pinion
+        add(geo, MESH_STEP[i]);
+      });
+      // the real turntable (step 7) and its drive over the right drive pod (step 8)
+      const PIN_A = -15 * Math.PI / 180;
+      robitsTurntable(G.chassis, G.turret, mk, [158.75 * Math.cos(PIN_A), 158.75 * Math.sin(PIN_A)]).forEach((m, k) => track(m, k < 4 ? 7 : 8));
     } catch (e) { msg.textContent = "Couldn't load the robot model. The steps and checklist still work."; return; }
     stage.insertBefore(renderer.domElement, stage.firstChild);
     renderer.domElement.setAttribute("aria-label", "3D model of the robot. Drag to turn it.");

@@ -164,6 +164,20 @@ Sim controls (Xbox names):
 
 The plan is manual turret and hood plus field-centric driving first, and auto aim after the parts are built and tested. **Not started; this waits until after the scrimmage.**
 
+### Design review (2026-11-16)
+
+Full list with drawings: **BioBuzz Design Review**, https://claude.ai/artifact/HtVqgeSpsn3mLcW48VT9JT. Drive the corrected robot: **BioBuzz Final Build**, https://claude.ai/artifact/Xb9AfAQjssNirSPoWULm61.
+
+**Facts measured from the CAD, the manual (TU09) and AndyMark's STEP file:**
+- **Balls:** POLLEN 71 mm, NECTAR 91 mm. Robot limit is 4 (G407); the lift holds 2.
+- **Size:** 454 × 440 × 447 mm (17.9 × 17.3 × 17.6 in) with the hood at 25°. Start with the hood at 45° or more. Expansion limit is 18 × 24 × 29 in (R105).
+- **Turntable:** AndyMark Robits 5.5 in. ID (am-5470). Plate 254 mm square × 5.59, hole 139.7; bearing 145 inside / 203 outside × 10; 200T gear 256.5 mm × 13.4; 50T pinion at 158.75 mm from the turret's center (4:1); pinion bore is 3/8 in. hex (needs am-4957 for a 5 mm shaft). Stack height matches the CAD (turret base at 153 mm).
+- **Turret drive:** no upright motor fits on the pinion circle. Free pockets are over the left and right drive pods, 41 mm ahead of the turret's center, 60 mm tall: a flat motor (Core Hex: 31 rpm at the turret) or AndyMark's 5-turn servo. The CAD's stop finger hits the real pinion, so a new hard stop is needed.
+- **NECTAR doesn't fit** the hood gap (about 60 mm) or the booster gap (61 mm). The lift's sprung wall (61 to 82 mm) and the turntable hole are fine. The intake shaft is 84 mm up, 7 mm too low for NECTAR.
+- **Odometry pods are in the CAD:** forward pod 20 mm left and 139 mm behind center; strafe pod 52 mm right and 145 mm behind; Pinpoint above the strafe pod. They match goBILDA's Swingarm pod (43 mm wide).
+- **Other:** 3 mm ground clearance; signs are red only with 30 mm numbers (need blue too, 57 mm numbers); all 8 motor ports used; no shot inside about 1.2 m; flywheel needs 2,300 to 3,400 RPM (has about 5,190).
+- **Parts:** real part numbers and STEP links are in the review. The frame in the CAD is 23 custom bodies, not real channel.
+
 ## 6. Open items
 
 - [x] New auto timings (0.7 / 0.8 / 0.8) are in TeamCode `Auto.java`
@@ -179,6 +193,9 @@ The plan is manual turret and hood plus field-centric driving first, and auto ai
 - [ ] Find the best shooting RPM from the usual spot and write it here
 - [ ] New robot TeleOp (section 5), after the scrimmage
 - [ ] Plan autos in the **BioBuzz Auto Lab** (https://claude.ai/artifact/EsGvvBmmtKn4Ryt5jtRJxa). Pedro coordinates: inches, (0,0) bottom-left, red wall on the left, audience at the bottom, heading 0 = facing blue, CCW. Pedro 3 API: PoseFactory.degrees(), Paths.line/curve, .linear/.constant/.tangent, follower.follow(path), isBusy(), Constants.create(hardwareMap)
+- [ ] Decide the turret drive: Core Hex or AndyMark 5-turn servo, and which side (see section 5, Design review)
+- [ ] Fix the 5 must-fix items in the Design Review before cutting parts: turntable drive and hard stop, carry 4 balls, NECTAR through the hood and booster, centering under the turntable hole, red and blue signs
+- [ ] Confirm the parts marked "confirm" in the Design Review's parts table (flywheel wheels, 60T/24T gears, lift and booster motors, battery, hood servo)
 - [ ] Build the new robot using the **BioBuzz Build Book** (https://claude.ai/artifact/73s526dSvjrwGTtVFrTdqW): 3D steps plus a shared checklist; each step unlocks when the last is fully checked
 
 ## 7. Change log
@@ -226,3 +243,4 @@ The plan is manual turret and hood plus field-centric driving first, and auto ai
 | 2026-11-14 | Captain (Claude A) | Team lead asked why paths were red. The geometry check flagged paths that only brush a wall, bar or FLOWER and slide off (77 of 400 random paths were false alarms). Now red comes from a real test run: after each edit the auto runs once in the sim in the background, and a path is red only if the robot actually got stuck or timed out there (the ! marks where). Stuck messages also name balls being pushed. Striped keep-out zones stay as a guide. Review skipped, team lead OK (tool only) |
 | 2026-11-14 | Captain (Claude A) | Team lead saw lots of red and thought it was an error: it was the striped keep-out zones (including a band along every wall). Now red means only a stuck path. The zones are thin dashed amber outlines around the frame bars and FLOWERS only, shown while dragging, when a path is red, or with "Always show bump zones". Added a color legend under the field. Review skipped, team lead OK (tool only) |
 | 2026-11-15 | Captain (Claude A) | Team lead asked for a 3D file of the robot for Onshape. Exported the sim robot's CAD (robotData.json) to STL in mm: whole robot plus 6 sections (chassis, turret base, intake, turret, flywheel, hood), and a colored OBJ. 454 x 440 x 447 mm, front -Y, turret facing +X, hood 25°. Files in ~/Desktop/Robotics FTC/robot-cad (too big for git); script in tools/robot-cad. Review skipped, team lead OK (tool only) |
+| 2026-11-16 | Captain (Claude A) | Team lead asked for everything polished, the real AndyMark Robits turntable, the ball path shown, real parts with STEP files, ideas for both ball sizes, a list of design problems, and a drivable 3D final build. Made three things. (1) **BioBuzz Final Build** (https://claude.ai/artifact/Xb9AfAQjssNirSPoWULm61): the Test Drive sim with the Robits am-5470 drawn from AndyMark's STEP sizes, an X-ray switch that shows balls moving through the robot, and an Inspect view; physics unchanged. (2) **BioBuzz Design Review** (https://claude.ai/artifact/HtVqgeSpsn3mLcW48VT9JT): 5 must-fix, 7 should-fix, 4 to check, 8 passing, with to-scale drawings, expansion ideas, a real-parts table with STEP links and a custom-parts list. (3) **Build Book** updated: steps 7 and 8 use the Robits turntable and its real drive position, step 4 shows the odometry pods (they were in the CAD all along; the old note was wrong), new checks for NECTAR, hard stops, hood position and signs. Facts are in section 5. Sources in tools/final-build, tools/design-review, tools/build-book. Review skipped, team lead OK (tools only, no robot code) |
